@@ -29,4 +29,8 @@ impl Query {
             qclass: ((data[qindex + 2] as u16) << 8) + (data[qindex + 3] as u16),
         });
     }
+
+    pub fn get_qname(&self) -> &Vec<u8> {
+        return &self.qname;
+    }
 }

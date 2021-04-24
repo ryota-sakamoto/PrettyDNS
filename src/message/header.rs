@@ -2,10 +2,10 @@
 pub struct Header {
     id: u16,
     flag: u16,
-    qd_count: u16,
-    an_count: u16,
-    ns_count: u16,
-    ar_count: u16,
+    pub qd_count: u16,
+    pub an_count: u16,
+    pub ns_count: u16,
+    pub ar_count: u16,
 }
 
 impl Header {
