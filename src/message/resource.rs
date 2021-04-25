@@ -12,7 +12,16 @@ pub struct Resource {
 }
 
 impl Resource {
-    pub async fn from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Resource> {
+    pub async fn from_cursor(c: &mut Cursor<&[u8]>, count: u16) -> std::io::Result<Vec<Resource>> {
+        let mut result = vec![];
+        for _ in 0..count {
+            let r = Self::_from_cursor(c).await?;
+            result.push(r);
+        }
+        return Ok(result);
+    }
+
+    async fn _from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Resource> {
         let m1 = c.read_u8().await?;
         let m2 = c.read_u8().await?;
 
@@ -92,9 +101,9 @@ mod tests {
     async fn parse_resource() {
         let data: Vec<u8> = vec![192, 12, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238];
         let mut c = std::io::Cursor::new(data.as_ref());
-        let result = Resource::from_cursor(&mut c).await;
+        let result = Resource::from_cursor(&mut c, 1).await;
 
-        let q = result.unwrap();
+        let ref q = result.unwrap()[0];
         assert_eq!(q.name, vec![192, 12]);
         assert_eq!(q._type, 1);
         assert_eq!(q.class, 1);

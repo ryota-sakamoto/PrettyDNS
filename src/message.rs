@@ -8,7 +8,7 @@ use std::io::Cursor;
 pub struct Message {
     header: header::Header,
     query: Option<query::Query>,
-    answer: Option<resource::Resource>,
+    answer: Option<Vec<resource::Resource>>,
 }
 
 pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
@@ -21,7 +21,7 @@ pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
         None
     };
     let a = if h.an_count > 0 {
-        Some(resource::Resource::from_cursor(&mut c).await?)
+        Some(resource::Resource::from_cursor(&mut c, h.an_count).await?)
     } else {
         None
     };
@@ -50,8 +50,10 @@ impl Message {
         }
 
         if let Some(ref v) = self.answer {
-            let a = v.to_vec().await?;
-            result.extend_from_slice(&a);
+            for v in v {
+                let a = v.to_vec().await?;
+                result.extend_from_slice(&a);
+            }
         }
 
         return Ok(result);
