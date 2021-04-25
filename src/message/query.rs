@@ -1,3 +1,6 @@
+use std::io::Cursor;
+use tokio::io::AsyncReadExt;
+
 #[derive(Debug)]
 pub struct Query {
     qname: Vec<u8>,
@@ -7,26 +10,39 @@ pub struct Query {
 
 impl Query {
     pub async fn from_bytes(data: &[u8]) -> std::io::Result<Query> {
+        let mut c = Cursor::new(data);
+
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+
         let mut qname = vec![];
-        let mut qindex = 12;
         loop {
-            let label_count = data[qindex] as usize;
-            qindex += 1;
+            let label_count = c.read_u8().await?;
             if label_count == 0 {
                 break;
             }
 
-            let domain = &data[qindex..(qindex + label_count)];
-            qname.extend_from_slice(domain);
-            qname.push(46);
+            let mut buf = vec![0; label_count as usize];
+            c.read_exact(&mut buf).await?;
 
-            qindex += label_count;
+            qname.extend_from_slice(&buf);
+            qname.push(46);
         }
 
         return Ok(Query {
             qname: qname,
-            qtype: ((data[qindex] as u16) << 8) + (data[qindex + 1] as u16),
-            qclass: ((data[qindex + 2] as u16) << 8) + (data[qindex + 3] as u16),
+            qtype: c.read_u16().await?,
+            qclass: c.read_u16().await?,
         });
     }
 
