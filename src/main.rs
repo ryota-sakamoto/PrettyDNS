@@ -19,18 +19,10 @@ async fn main() -> io::Result<()> {
         println!("req: {:?}", req);
 
         // tokio::spawn(async {
-        let result = client::dig(req).await;
+        let result = client::dig(req).await?;
         println!("result: {:?}", result);
 
-        sock.send_to(
-            &vec![
-                buf[0], buf[1], buf[2], buf[3], 0, 1, 0, 1, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108,
-                101, 3, 99, 111, 109, 0, 0, 1, 0, 1, 192, 12, 0, 1, 0, 1, 0, 0, 0, 163, 0, 4, 172,
-                217, 25, 78,
-            ],
-            addr,
-        )
-        .await?;
+        sock.send_to(&result, addr).await?;
         // });
     }
 }
