@@ -1,5 +1,5 @@
 use std::io::Cursor;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Header {
@@ -23,6 +23,18 @@ impl Header {
             ar_count: c.read_u16().await?,
         });
     }
+
+    pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut v = vec![];
+        v.write_u16(self.id).await?;
+        v.write_u16(self.flag).await?;
+        v.write_u16(self.qd_count).await?;
+        v.write_u16(self.an_count).await?;
+        v.write_u16(self.ns_count).await?;
+        v.write_u16(self.ar_count).await?;
+
+        return Ok(v);
+    }
 }
 
 mod tests {
@@ -43,5 +55,20 @@ mod tests {
         assert_eq!(h.an_count, 0);
         assert_eq!(h.ns_count, 0);
         assert_eq!(h.ar_count, 0);
+    }
+
+    #[tokio::test]
+    async fn write_header() {
+        let h = Header {
+            id: 50347,
+            flag: 288,
+            qd_count: 1,
+            an_count: 0,
+            ns_count: 0,
+            ar_count: 0,
+        };
+
+        let result = h.to_vec().await.unwrap();
+        assert_eq!(result, vec![196, 171, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0]);
     }
 }
