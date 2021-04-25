@@ -10,7 +10,7 @@ pub struct Message {
 }
 
 pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
-    let h = header::Header::from_bytes(data).await.unwrap();
+    let h = header::Header::from_bytes(data).await?;
     let q = if h.qd_count > 0 {
         Some(query::Query::from_bytes(data).await?)
     } else {
