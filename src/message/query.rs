@@ -6,7 +6,7 @@ pub struct Query {
 }
 
 impl Query {
-    pub fn from_bytes(data: &[u8]) -> Result<Query, String> {
+    pub async fn from_bytes(data: &[u8]) -> std::io::Result<Query> {
         let mut qname = vec![];
         let mut qindex = 12;
         loop {
@@ -32,5 +32,26 @@ impl Query {
 
     pub fn get_qname(&self) -> &Vec<u8> {
         return &self.qname;
+    }
+}
+
+mod tests {
+    use super::Query;
+
+    #[tokio::test]
+    async fn parse_query() {
+        let data = [
+            196, 171, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
+            109, 0, 0, 1, 0, 1,
+        ];
+        let result = Query::from_bytes(&data).await;
+
+        let q = result.unwrap();
+        assert_eq!(
+            q.qname,
+            vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]
+        );
+        assert_eq!(q.qclass, 1);
+        assert_eq!(q.qtype, 1);
     }
 }
