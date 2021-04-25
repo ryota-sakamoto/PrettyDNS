@@ -1,4 +1,5 @@
 use std::io::Cursor;
+use tokio::io::AsyncReadExt;
 
 #[derive(Debug)]
 pub struct Header {
@@ -11,14 +12,15 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn from_bytes(data: &[u8]) -> Result<Header, String> {
+    pub async fn from_bytes(data: &[u8]) -> std::io::Result<Header> {
+        let mut c = Cursor::new(data);
         return Ok(Header {
-            id: ((data[0] as u16) << 8) + (data[1] as u16),
-            flag: ((data[2] as u16) << 8) + (data[3] as u16),
-            qd_count: ((data[4] as u16) << 8) + (data[5] as u16),
-            an_count: ((data[6] as u16) << 8) + (data[7] as u16),
-            ns_count: ((data[8] as u16) << 8) + (data[9] as u16),
-            ar_count: ((data[10] as u16) << 8) + (data[11] as u16),
+            id: c.read_u16().await?,
+            flag: c.read_u16().await?,
+            qd_count: c.read_u16().await?,
+            an_count: c.read_u16().await?,
+            ns_count: c.read_u16().await?,
+            ar_count: c.read_u16().await?,
         });
     }
 }
@@ -26,14 +28,13 @@ impl Header {
 mod tests {
     use super::Header;
 
-    #[test]
-    fn parse_header() {
+    #[tokio::test]
+    async fn parse_header() {
         let data = [
             196, 171, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
             109, 0, 0, 1, 0, 1,
         ];
-        let result = Header::from_bytes(&data);
-        assert!(result.is_ok());
+        let result = Header::from_bytes(&data).await;
 
         let h = result.unwrap();
         assert_eq!(h.id, 50347);

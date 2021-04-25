@@ -15,7 +15,7 @@ async fn main() -> io::Result<()> {
         println!("data: {:?}", &buf[..len]);
         println!("len: {:?}", len);
 
-        let req = message::from_bytes(&buf).unwrap();
+        let req = message::from_bytes(&buf).await.unwrap();
         println!("req: {:?}", req);
 
         // tokio::spawn(async {

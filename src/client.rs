@@ -20,7 +20,7 @@ pub async fn dig(req: message::Message) -> io::Result<String> {
         let mut buf = [0; 1024];
         let (len, _) = sock.recv_from(&mut buf).await.unwrap();
 
-        let res = message::from_bytes(&buf).unwrap();
+        let res = message::from_bytes(&buf).await.unwrap();
         println!("res: {:?}", res);
         println!("buf: {:?}", &buf[..len]);
     })

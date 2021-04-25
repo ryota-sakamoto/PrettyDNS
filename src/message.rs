@@ -9,8 +9,8 @@ pub struct Message {
     answer: Option<resource::Resource>,
 }
 
-pub fn from_bytes(data: &[u8]) -> Result<Message, String> {
-    let h = header::Header::from_bytes(data)?;
+pub async fn from_bytes(data: &[u8]) -> Result<Message, String> {
+    let h = header::Header::from_bytes(data).await.unwrap();
     let q = if h.qd_count > 0 {
         Some(query::Query::from_bytes(data)?)
     } else {
