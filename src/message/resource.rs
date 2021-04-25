@@ -1,3 +1,6 @@
+use std::io::Cursor;
+use tokio::io::AsyncReadExt;
+
 #[derive(Debug)]
 pub struct Resource {
     name: Vec<u8>,
@@ -10,37 +13,49 @@ pub struct Resource {
 
 impl Resource {
     pub async fn from_bytes(data: &[u8]) -> std::io::Result<Resource> {
+        let mut c = Cursor::new(data);
+
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+
         let mut name = vec![];
-        let mut qindex = 12;
         loop {
-            let label_count = data[qindex] as usize;
-            qindex += 1;
+            let label_count = c.read_u8().await?;
             if label_count == 0 {
                 break;
             }
 
-            let domain = &data[qindex..(qindex + label_count)];
-            name.extend_from_slice(domain);
-            name.push(46);
+            let mut buf = vec![0; label_count as usize];
+            c.read_exact(&mut buf).await?;
 
-            qindex += label_count;
+            name.extend_from_slice(&buf);
+            name.push(46);
         }
 
-        qindex = 30;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
+        c.read_u8().await?;
 
         return Ok(Resource {
             name: name,
-            _type: ((data[qindex] as u16) << 8) + (data[qindex + 1] as u16),
-            class: ((data[qindex + 2] as u16) << 8) + (data[qindex + 3] as u16),
-            ttl: ((data[qindex + 4] as u32) << 24)
-                + ((data[qindex + 5] as u32) << 16)
-                + ((data[qindex + 6] as u32) << 8)
-                + (data[qindex + 7] as u32),
-            rdlength: ((data[qindex + 8] as u16) << 8) + (data[qindex + 9] as u16),
-            rdata: ((data[qindex + 10] as u32) << 24)
-                + ((data[qindex + 11] as u32) << 16)
-                + ((data[qindex + 12] as u32) << 8)
-                + (data[qindex + 13] as u32),
+            _type: c.read_u16().await?,
+            class: c.read_u16().await?,
+            ttl: c.read_u32().await?,
+            rdlength: c.read_u16().await?,
+            rdata: c.read_u32().await?,
         });
     }
 }
