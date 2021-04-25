@@ -1,5 +1,5 @@
 use std::io::Cursor;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Resource {
@@ -58,6 +58,26 @@ impl Resource {
             rdata: c.read_u32().await?,
         });
     }
+
+    pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut v = vec![];
+
+        let mut name = vec![];
+        for v in self.name.split(|v| *v == 46) {
+            name.push(v.len() as u8);
+            name.extend_from_slice(v);
+        }
+
+        v.write_all(&name).await?;
+
+        v.write_u16(self._type).await?;
+        v.write_u16(self.class).await?;
+        v.write_u32(self.ttl).await?;
+        v.write_u16(self.rdlength).await?;
+        v.write_u32(self.rdata).await?;
+
+        return Ok(v);
+    }
 }
 
 mod tests {
@@ -81,5 +101,26 @@ mod tests {
         assert_eq!(q.ttl, 299);
         assert_eq!(q.rdlength, 4);
         assert_eq!(q.rdata, 2899909102);
+    }
+
+    #[tokio::test]
+    async fn write_resource() {
+        let h = Resource {
+            name: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
+            _type: 1,
+            class: 1,
+            ttl: 299,
+            rdlength: 4,
+            rdata: 2899909102,
+        };
+
+        let result = h.to_vec().await.unwrap();
+        assert_eq!(
+            result,
+            vec![
+                6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4,
+                172, 217, 25, 238
+            ]
+        );
     }
 }
