@@ -97,6 +97,9 @@ mod tests {
         };
 
         let result = q.to_vec().await.unwrap();
-        assert_eq!(result, vec![6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1]);
+        assert_eq!(
+            result,
+            vec![6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1]
+        );
     }
 }
