@@ -1,5 +1,5 @@
 use std::io::Cursor;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Query {
@@ -49,6 +49,23 @@ impl Query {
     pub fn get_qname(&self) -> &Vec<u8> {
         return &self.qname;
     }
+
+    pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut v = vec![];
+
+        let mut qname = vec![];
+        for v in self.qname.split(|v| *v == 46) {
+            qname.push(v.len() as u8);
+            qname.extend_from_slice(v);
+        }
+
+        v.write_all(&qname).await?;
+
+        v.write_u16(self.qtype).await?;
+        v.write_u16(self.qclass).await?;
+
+        return Ok(v);
+    }
 }
 
 mod tests {
@@ -69,5 +86,17 @@ mod tests {
         );
         assert_eq!(q.qclass, 1);
         assert_eq!(q.qtype, 1);
+    }
+
+    #[tokio::test]
+    async fn write_query() {
+        let q = Query {
+            qname: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
+            qclass: 1,
+            qtype: 1,
+        };
+
+        let result = q.to_vec().await.unwrap();
+        assert_eq!(result, vec![6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1]);
     }
 }
