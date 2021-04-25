@@ -18,11 +18,15 @@ pub async fn dig(req: message::Message) -> io::Result<String> {
 
     time::timeout(Duration::from_secs(3), async {
         let mut buf = [0; 1024];
-        let (len, _) = sock.recv_from(&mut buf).await.unwrap();
 
-        let res = message::from_bytes(&buf).await.unwrap();
-        println!("res: {:?}", res);
-        println!("buf: {:?}", &buf[..len]);
+        match sock.recv_from(&mut buf).await {
+            Ok(v) => {
+                let res = message::from_bytes(&buf).await.unwrap();
+                println!("res: {:?}", res);
+                println!("buf: {:?}", &buf[..v.0]);
+            }
+            Err(v) => {}
+        }
     })
     .await?;
 
