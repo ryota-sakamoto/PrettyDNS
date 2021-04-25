@@ -33,4 +33,23 @@ impl Message {
     pub fn get_fqdn(&self) -> Option<String> {
         return String::from_utf8(self.query.as_ref()?.get_qname().clone()).ok();
     }
+
+    pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut result = vec![];
+
+        let h = self.header.to_vec().await?;
+        result.extend_from_slice(&h);
+
+        if let Some(ref v) = self.query {
+            let q = v.to_vec().await?;
+            result.extend_from_slice(&q);
+        }
+
+        if let Some(ref v) = self.answer {
+            let a = v.to_vec().await?;
+            result.extend_from_slice(&a);
+        }
+
+        return Ok(result);
+    }
 }
