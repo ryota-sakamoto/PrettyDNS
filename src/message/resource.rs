@@ -1,5 +1,5 @@
-use std::io::Cursor;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::io::{Cursor, SeekFrom};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Resource {
@@ -12,42 +12,30 @@ pub struct Resource {
 }
 
 impl Resource {
-    pub async fn from_bytes(data: &[u8]) -> std::io::Result<Resource> {
-        let mut c = Cursor::new(data);
-
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
+    pub async fn from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Resource> {
+        let m1 = c.read_u8().await?;
+        let m2 = c.read_u8().await?;
 
         let mut name = vec![];
-        loop {
-            let label_count = c.read_u8().await?;
-            if label_count == 0 {
-                break;
+        if (m1 >> 6) == 3 {
+            name.push(m1);
+            name.push(m2);
+        } else {
+            c.seek(SeekFrom::Current(-2)).await?;
+
+            loop {
+                let label_count = c.read_u8().await?;
+                if label_count == 0 {
+                    break;
+                }
+
+                let mut buf = vec![0; label_count as usize];
+                c.read_exact(&mut buf).await?;
+
+                name.extend_from_slice(&buf);
+                name.push(46);
             }
-
-            let mut buf = vec![0; label_count as usize];
-            c.read_exact(&mut buf).await?;
-
-            name.extend_from_slice(&buf);
-            name.push(46);
         }
-
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
 
         return Ok(Resource {
             name: name,
@@ -63,9 +51,13 @@ impl Resource {
         let mut v = vec![];
 
         let mut name = vec![];
-        for v in self.name.split(|v| *v == 46) {
-            name.push(v.len() as u8);
-            name.extend_from_slice(v);
+        if self.name.len() == 2 {
+            name.extend_from_slice(&self.name);
+        } else {
+            for v in self.name.split(|v| *v == 46) {
+                name.push(v.len() as u8);
+                name.extend_from_slice(v);
+            }
         }
 
         v.write_all(&name).await?;
@@ -85,17 +77,12 @@ mod tests {
 
     #[tokio::test]
     async fn parse_resource() {
-        let data = [
-            190, 92, 129, 128, 0, 1, 0, 1, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
-            109, 0, 0, 1, 0, 1, 192, 12, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238,
-        ];
-        let result = Resource::from_bytes(&data).await;
+        let data: Vec<u8> = vec![192, 12, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238];
+        let mut c = std::io::Cursor::new(data.as_ref());
+        let result = Resource::from_cursor(&mut c).await;
 
         let q = result.unwrap();
-        assert_eq!(
-            q.name,
-            vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]
-        );
+        assert_eq!(q.name, vec![192, 12]);
         assert_eq!(q._type, 1);
         assert_eq!(q.class, 1);
         assert_eq!(q.ttl, 299);

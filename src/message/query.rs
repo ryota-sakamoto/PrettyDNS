@@ -9,22 +9,7 @@ pub struct Query {
 }
 
 impl Query {
-    pub async fn from_bytes(data: &[u8]) -> std::io::Result<Query> {
-        let mut c = Cursor::new(data);
-
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-        c.read_u8().await?;
-
+    pub async fn from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Query> {
         let mut qname = vec![];
         loop {
             let label_count = c.read_u8().await?;
@@ -73,11 +58,11 @@ mod tests {
 
     #[tokio::test]
     async fn parse_query() {
-        let data = [
-            196, 171, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
-            109, 0, 0, 1, 0, 1,
+        let data: Vec<u8> = vec![
+            6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1,
         ];
-        let result = Query::from_bytes(&data).await;
+        let mut c = std::io::Cursor::new(data.as_ref());
+        let result = Query::from_cursor(&mut c).await;
 
         let q = result.unwrap();
         assert_eq!(

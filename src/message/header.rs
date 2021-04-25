@@ -12,8 +12,7 @@ pub struct Header {
 }
 
 impl Header {
-    pub async fn from_bytes(data: &[u8]) -> std::io::Result<Header> {
-        let mut c = Cursor::new(data);
+    pub async fn from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Header> {
         return Ok(Header {
             id: c.read_u16().await?,
             flag: c.read_u16().await?,
@@ -42,11 +41,12 @@ mod tests {
 
     #[tokio::test]
     async fn parse_header() {
-        let data = [
+        let data: Vec<u8> = vec![
             196, 171, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
             109, 0, 0, 1, 0, 1,
         ];
-        let result = Header::from_bytes(&data).await;
+        let mut c = std::io::Cursor::new(data.as_ref());
+        let result = Header::from_cursor(&mut c).await;
 
         let h = result.unwrap();
         assert_eq!(h.id, 50347);
