@@ -8,7 +8,7 @@ pub struct Resource {
     class: u16,
     ttl: u32,
     rdlength: u16,
-    rdata: u32,
+    rdata: Vec<u8>,
 }
 
 impl Resource {
@@ -37,13 +37,24 @@ impl Resource {
             }
         }
 
+        let _type = c.read_u16().await?;
+        let class = c.read_u16().await?;
+        let ttl = c.read_u32().await?;
+        let rdlength = c.read_u16().await?;
+
+        let mut rdata = vec![];
+        for _ in 0..rdlength {
+            let v = c.read_u8().await?;
+            rdata.push(v);
+        }
+
         return Ok(Resource {
             name: name,
-            _type: c.read_u16().await?,
-            class: c.read_u16().await?,
-            ttl: c.read_u32().await?,
-            rdlength: c.read_u16().await?,
-            rdata: c.read_u32().await?,
+            _type: _type,
+            class: class,
+            ttl: ttl,
+            rdlength: rdlength,
+            rdata: rdata,
         });
     }
 
@@ -66,7 +77,9 @@ impl Resource {
         v.write_u16(self.class).await?;
         v.write_u32(self.ttl).await?;
         v.write_u16(self.rdlength).await?;
-        v.write_u32(self.rdata).await?;
+        for d in &self.rdata {
+            v.write_u8(*d).await?;
+        }
 
         return Ok(v);
     }
@@ -87,7 +100,7 @@ mod tests {
         assert_eq!(q.class, 1);
         assert_eq!(q.ttl, 299);
         assert_eq!(q.rdlength, 4);
-        assert_eq!(q.rdata, 2899909102);
+        assert_eq!(q.rdata, vec![172, 217, 25, 238]);
     }
 
     #[tokio::test]
@@ -98,7 +111,7 @@ mod tests {
             class: 1,
             ttl: 299,
             rdlength: 4,
-            rdata: 2899909102,
+            rdata: vec![172, 217, 25, 238],
         };
 
         let result = h.to_vec().await.unwrap();
