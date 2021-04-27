@@ -69,6 +69,11 @@ async fn _handler(
 }
 
 pub fn get_domain_list(domain: &str) -> Vec<String> {
+    let mut domain = domain.to_owned();
+    if !domain.ends_with(".") {
+        domain += ".";
+    }
+    
     let mut result = vec![];
     let mut v: Vec<&str> = domain.split(".").collect();
 
