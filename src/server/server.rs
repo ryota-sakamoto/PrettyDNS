@@ -67,3 +67,31 @@ async fn _handler(
 
     Ok(())
 }
+
+pub fn get_domain_list(domain: &str) -> Vec<String> {
+    let mut result = vec![];
+    let mut v: Vec<&str> = domain.split(".").collect();
+
+    while v.len() > 0 {
+        if v[0] == "" {
+            break;
+        }
+
+        result.push(v.join("."));
+        v.reverse();
+        v.pop();
+        v.reverse();
+    }
+
+    return result;
+}
+
+mod tests {
+    use super::get_domain_list;
+
+    #[tokio::test]
+    async fn test_get_domain_list() {
+        let list = get_domain_list("www.google.com.");
+        assert_eq!(list, vec!["www.google.com.", "google.com.", "com."]);
+    }
+}
