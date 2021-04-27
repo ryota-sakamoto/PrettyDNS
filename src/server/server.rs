@@ -1,6 +1,3 @@
-// mod client;
-// mod message;
-
 use std::{io, sync::Arc};
 use tokio::{net::UdpSocket, sync::mpsc};
 
