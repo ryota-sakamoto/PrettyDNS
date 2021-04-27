@@ -22,7 +22,15 @@ pub async fn start(c: Config) -> io::Result<()> {
 
     let (tx, rx) = mpsc::channel::<(Vec<u8>, std::net::SocketAddr)>(1000);
     tokio::spawn(handler(sock.clone(), rx));
+    let handle = tokio::spawn(receiver(sock.clone(), tx));
 
+    return handle.await?;
+}
+
+async fn receiver(
+    sock: Arc<UdpSocket>,
+    tx: mpsc::Sender<(Vec<u8>, std::net::SocketAddr)>,
+) -> io::Result<()> {
     let mut buf = [0; 1024];
     loop {
         let (len, addr) = sock.recv_from(&mut buf).await?;
