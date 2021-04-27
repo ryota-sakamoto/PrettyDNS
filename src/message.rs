@@ -34,10 +34,6 @@ pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
 }
 
 impl Message {
-    pub fn get_fqdn(&self) -> Option<String> {
-        return String::from_utf8(self.query.as_ref()?.get_qname().clone()).ok();
-    }
-
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut result = vec![];
 

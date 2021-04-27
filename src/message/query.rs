@@ -3,7 +3,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Query {
-    qname: Vec<u8>,
+    qname: String,
     qtype: u16,
     qclass: u16,
 }
@@ -24,24 +24,22 @@ impl Query {
             qname.push(46);
         }
 
+        let q = String::from_utf8(qname).unwrap();
+
         return Ok(Query {
-            qname: qname,
+            qname: q,
             qtype: c.read_u16().await?,
             qclass: c.read_u16().await?,
         });
-    }
-
-    pub fn get_qname(&self) -> &Vec<u8> {
-        return &self.qname;
     }
 
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut v = vec![];
 
         let mut qname = vec![];
-        for v in self.qname.split(|v| *v == 46) {
+        for v in self.qname.split(|v| v == '.') {
             qname.push(v.len() as u8);
-            qname.extend_from_slice(v);
+            qname.extend_from_slice(v.as_bytes());
         }
 
         v.write_all(&qname).await?;
@@ -65,10 +63,7 @@ mod tests {
         let result = Query::from_cursor(&mut c).await;
 
         let q = result.unwrap();
-        assert_eq!(
-            q.qname,
-            vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]
-        );
+        assert_eq!(q.qname, "google.com.");
         assert_eq!(q.qclass, 1);
         assert_eq!(q.qtype, 1);
     }
@@ -76,7 +71,7 @@ mod tests {
     #[tokio::test]
     async fn write_query() {
         let q = Query {
-            qname: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
+            qname: "google.com.".to_owned(),
             qclass: 1,
             qtype: 1,
         };
