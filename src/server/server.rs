@@ -60,7 +60,7 @@ async fn _handler(
     let req = message::from_bytes(&buf).await?;
     println!("req: {:?}", req);
 
-    let result = client::dig(req).await?;
+    let result = client::forward(req).await?;
     println!("result: {:?}", result);
 
     sock.send_to(&result, addr).await?;

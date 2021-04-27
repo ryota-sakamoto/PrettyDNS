@@ -5,7 +5,7 @@ use tokio::{
     time::{self, Duration},
 };
 
-pub async fn dig(req: message::Message) -> io::Result<Vec<u8>> {
+pub async fn forward(req: message::Message) -> io::Result<Vec<u8>> {
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
     let data = req.to_vec().await?;
     sock.send_to(&data, "8.8.8.8:53").await?;
