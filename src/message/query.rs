@@ -3,9 +3,9 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Query {
-    qname: String,
-    qtype: u16,
-    qclass: u16,
+    pub qname: String,
+    pub qtype: u16,
+    pub qclass: u16,
 }
 
 impl Query {

@@ -1,6 +1,5 @@
+use pretty_dns::server;
 use std::io;
-
-mod server;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {

@@ -1,7 +1,8 @@
 use std::{io, sync::Arc};
 use tokio::{net::UdpSocket, sync::mpsc};
 
-use pretty_dns::{client, message};
+use crate::{
+    client, message::{self, query::Query}, server::cache};
 
 #[derive(Default)]
 pub struct Config {
@@ -60,6 +61,22 @@ async fn _handler(
     let req = message::from_bytes(&buf).await?;
     println!("req: {:?}", req);
 
+    if let Some(q) = &req.query {
+        let mut resolve_list = vec![];
+        let domain_list = get_domain_list(&q.qname);
+        for v in domain_list {
+            let record = cache::resolve(v.clone(), q.qtype);
+            if let Some(r) = record {
+                break;
+            } else {
+                resolve_list.push(v);
+            }
+        }
+
+        resolve_list.reverse();
+        println!("resolve_list: {:?}", &resolve_list);
+    }
+
     let result = client::forward(req).await?;
     println!("result: {:?}", result);
 
@@ -73,7 +90,7 @@ pub fn get_domain_list(domain: &str) -> Vec<String> {
     if !domain.ends_with(".") {
         domain += ".";
     }
-    
+
     let mut result = vec![];
     let mut v: Vec<&str> = domain.split(".").collect();
 

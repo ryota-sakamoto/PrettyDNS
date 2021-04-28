@@ -1,3 +1,4 @@
-pub mod server;
+mod cache;
+mod server;
 
 pub use server::*;

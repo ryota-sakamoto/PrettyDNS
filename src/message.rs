@@ -6,9 +6,11 @@ use std::io::Cursor;
 
 #[derive(Debug)]
 pub struct Message {
-    header: header::Header,
-    query: Option<query::Query>,
-    answer: Option<Vec<resource::Resource>>,
+    pub header: header::Header,
+    pub query: Option<query::Query>,
+    pub answer: Option<Vec<resource::Resource>>,
+    pub authority: Option<Vec<resource::Resource>>,
+    pub additional: Option<Vec<resource::Resource>>,
 }
 
 pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
@@ -25,11 +27,23 @@ pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
     } else {
         None
     };
+    let au = if h.ns_count > 0 {
+        Some(resource::Resource::from_cursor(&mut c, h.ns_count).await?)
+    } else {
+        None
+    };
+    let ad = if h.ar_count > 0 {
+        Some(resource::Resource::from_cursor(&mut c, h.ar_count).await?)
+    } else {
+        None
+    };
 
     return Ok(Message {
         header: h,
         query: q,
         answer: a,
+        authority: au,
+        additional: ad,
     });
 }
 
@@ -46,6 +60,20 @@ impl Message {
         }
 
         if let Some(ref v) = self.answer {
+            for v in v {
+                let a = v.to_vec().await?;
+                result.extend_from_slice(&a);
+            }
+        }
+
+        if let Some(ref v) = self.authority {
+            for v in v {
+                let a = v.to_vec().await?;
+                result.extend_from_slice(&a);
+            }
+        }
+
+        if let Some(ref v) = self.additional {
             for v in v {
                 let a = v.to_vec().await?;
                 result.extend_from_slice(&a);
