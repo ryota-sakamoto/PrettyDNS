@@ -2,7 +2,10 @@ use std::{io, sync::Arc};
 use tokio::{net::UdpSocket, sync::mpsc};
 
 use crate::{
-    client, message::{self, query::Query}, server::cache};
+    client,
+    message::{self, query::Query},
+    server::cache,
+};
 
 #[derive(Default)]
 pub struct Config {
@@ -75,12 +78,37 @@ async fn _handler(
 
         resolve_list.reverse();
         println!("resolve_list: {:?}", &resolve_list);
+
+        let mut ns = "202.12.27.33:53";
+        for r in resolve_list {
+            let q = Query {
+                qname: r.clone(),
+                qtype: 1,
+                qclass: 1,
+            };
+
+            println!("resolve: {:?}, ns: {:?}", q, ns);
+            let result = client::resolve(q, ns).await?;
+
+            if r == "com." {
+                ns = "192.5.6.30:53";
+            } else if r == "google.com." {
+                ns = "216.239.34.10:53";
+            }
+        }
+
+        let q = Query {
+            qname: q.qname.clone(),
+            qtype: 1,
+            qclass: 1,
+        };
+        println!("resolve: {:?}, ns: {:?}", q, ns);
+        let mut result = client::resolve(q, ns).await?;
+        result.header.id = req.header.id;
+        sock.send_to(&result.to_vec().await?, addr).await?;
+
+        println!("result: {:?}", result);
     }
-
-    let result = client::forward(req).await?;
-    println!("result: {:?}", result);
-
-    sock.send_to(&result, addr).await?;
 
     Ok(())
 }

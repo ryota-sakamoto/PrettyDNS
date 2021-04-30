@@ -3,12 +3,12 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Resource {
-    name: Vec<u8>,
-    _type: u16,
-    class: u16,
-    ttl: u32,
-    rdlength: u16,
-    rdata: Vec<u8>,
+    pub name: Vec<u8>,
+    pub _type: u16,
+    pub class: u16,
+    pub ttl: u32,
+    pub rdlength: u16,
+    pub rdata: Vec<u8>,
 }
 
 impl Resource {
