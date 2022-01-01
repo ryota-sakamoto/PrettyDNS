@@ -69,7 +69,7 @@ async fn _handler(
         let domain_list = get_domain_list(&q.qname);
         for v in domain_list {
             let record = cache::resolve(v.clone(), q.qtype);
-            if let Some(r) = record {
+            if let Some(_r) = record {
                 break;
             } else {
                 resolve_list.push(v);
@@ -88,7 +88,7 @@ async fn _handler(
             };
 
             println!("resolve: {:?}, ns: {:?}", q, ns);
-            let result = client::resolve(q, ns).await?;
+            let _result = client::resolve(q, ns).await?;
 
             if r == "com." {
                 ns = "192.5.6.30:53";

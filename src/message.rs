@@ -103,6 +103,6 @@ mod tests {
         ];
         let result = from_bytes(&data).await;
 
-        let q = result.unwrap();
+        let _q = result.unwrap();
     }
 }
