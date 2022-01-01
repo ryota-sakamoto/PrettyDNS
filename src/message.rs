@@ -4,7 +4,7 @@ pub mod resource;
 
 use nom::{combinator::cond, multi::count};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Message {
     pub header: header::Header,
     pub query: Option<query::Query>,
@@ -88,8 +88,37 @@ mod tests {
             245, 212, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
             109, 0, 0, 1, 0, 1,
         ];
-        let result = from_bytes(&data).await;
+        let result = from_bytes(&data).await.unwrap();
 
-        let _q = result.unwrap();
+        assert_eq!(
+            result,
+            super::Message {
+                header: super::header::Header {
+                    id: 62932,
+                    qr: 0,
+                    opcode: 0,
+                    aa: 0,
+                    tc: 0,
+                    rd: 1,
+                    ra: 0,
+                    z: 0,
+                    ad: 1,
+                    cd: 0,
+                    rcode: 0,
+                    qd_count: 1,
+                    an_count: 0,
+                    ns_count: 0,
+                    ar_count: 0,
+                },
+                query: Some(super::query::Query{
+                    qname: "google.com.".to_owned(),
+                    qclass: 1,
+                    qtype: 1,
+                }),
+                answer: None,
+                authority: None,
+                additional: None,
+            }
+        );
     }
 }

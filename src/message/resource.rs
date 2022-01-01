@@ -6,7 +6,7 @@ use nom::{
 };
 use tokio::io::AsyncWriteExt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Resource {
     pub name: Vec<u8>,
     pub _type: u16,

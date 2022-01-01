@@ -8,7 +8,7 @@ use nom::{
 
 use tokio::io::AsyncWriteExt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Query {
     pub qname: String,
     pub qtype: u16,
