@@ -4,8 +4,7 @@ use nom::{
     number::complete::{be_u16, be_u32, be_u8},
     IResult,
 };
-use std::io::{Cursor, SeekFrom};
-use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 
 #[derive(Debug)]
 pub struct Resource {
@@ -51,52 +50,6 @@ impl Resource {
         } else {
             return crate::message::query::Query::read_domain(data);
         }
-    }
-
-    async fn _from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Resource> {
-        let m1 = c.read_u8().await?;
-        let m2 = c.read_u8().await?;
-
-        let mut name = vec![];
-        if (m1 >> 6) == 3 {
-            name.push(m1);
-            name.push(m2);
-        } else {
-            c.seek(SeekFrom::Current(-2)).await?;
-
-            loop {
-                let label_count = c.read_u8().await?;
-                if label_count == 0 {
-                    break;
-                }
-
-                let mut buf = vec![0; label_count as usize];
-                c.read_exact(&mut buf).await?;
-
-                name.extend_from_slice(&buf);
-                name.push(46);
-            }
-        }
-
-        let _type = c.read_u16().await?;
-        let class = c.read_u16().await?;
-        let ttl = c.read_u32().await?;
-        let rdlength = c.read_u16().await?;
-
-        let mut rdata = vec![];
-        for _ in 0..rdlength {
-            let v = c.read_u8().await?;
-            rdata.push(v);
-        }
-
-        return Ok(Resource {
-            name: name,
-            _type: _type,
-            class: class,
-            ttl: ttl,
-            rdlength: rdlength,
-            rdata: rdata,
-        });
     }
 
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
