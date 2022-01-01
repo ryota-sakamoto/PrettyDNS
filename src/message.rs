@@ -19,13 +19,16 @@ pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
         return Err(std::io::Error::from(std::io::ErrorKind::Unsupported));
     }
 
-    let (data, h) = result.unwrap();
-    let mut c = Cursor::new(data);
+    let (mut data, h) = result.unwrap();
     let q = if h.qd_count > 0 {
-        Some(query::Query::from_cursor(&mut c).await?)
+        let (_data, q) = query::Query::read(data).unwrap();
+        data = _data;
+        Some(q)
     } else {
         None
     };
+
+    let mut c = Cursor::new(data);
     let a = if h.an_count > 0 {
         Some(resource::Resource::from_cursor(&mut c, h.an_count).await?)
     } else {

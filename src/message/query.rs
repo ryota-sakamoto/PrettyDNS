@@ -1,3 +1,10 @@
+use nom::{
+    bytes::complete::take,
+    combinator::{cond, flat_map},
+    multi::fold_many0,
+    number::complete::{be_u16, be_u8},
+    IResult,
+};
 use std::io::Cursor;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -9,28 +16,49 @@ pub struct Query {
 }
 
 impl Query {
-    pub async fn from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Query> {
-        let mut qname = vec![];
-        loop {
-            let label_count = c.read_u8().await?;
-            if label_count == 0 {
-                break;
-            }
+    pub fn read(data: &[u8]) -> IResult<&[u8], Query> {
+        let (data, qname) = fold_many0(
+            Query::read_domain,
+            Vec::new,
+            |mut v: Vec<_>, item: &[u8]| {
+                let mut item = item.to_vec();
+                item.push(46);
+                v.push(item);
+                v
+            },
+        )(data)?;
 
-            let mut buf = vec![0; label_count as usize];
-            c.read_exact(&mut buf).await?;
-
-            qname.extend_from_slice(&buf);
-            qname.push(46);
+        // read 0 of the end of the qname
+        let (data, z) = be_u8(data)?;
+        if z != 0 {
+            return Err(nom::Err::Incomplete(nom::Needed::new(0)));
         }
 
+        let qname: Vec<u8> = qname.into_iter().flatten().collect();
         let q = String::from_utf8(qname).unwrap();
+        let (data, qtype) = be_u16(data)?;
+        let (data, qclass) = be_u16(data)?;
 
-        return Ok(Query {
-            qname: q,
-            qtype: c.read_u16().await?,
-            qclass: c.read_u16().await?,
-        });
+        return Ok((
+            data,
+            Query {
+                qname: q,
+                qtype: qtype,
+                qclass: qclass,
+            },
+        ));
+    }
+
+    fn read_domain(data: &[u8]) -> IResult<&[u8], &[u8]> {
+        let (data, a) = flat_map(be_u8, take)(data)?;
+        if a.len() == 0 {
+            return Err(nom::Err::Error(nom::error::make_error(
+                data,
+                nom::error::ErrorKind::Eof,
+            )));
+        }
+
+        return Ok((data, a));
     }
 
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -59,10 +87,7 @@ mod tests {
         let data: Vec<u8> = vec![
             6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1,
         ];
-        let mut c = std::io::Cursor::new(data.as_ref());
-        let result = Query::from_cursor(&mut c).await;
-
-        let q = result.unwrap();
+        let (_, q) = Query::read(&data).unwrap();
         assert_eq!(q.qname, "google.com.");
         assert_eq!(q.qclass, 1);
         assert_eq!(q.qtype, 1);
