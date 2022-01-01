@@ -1,7 +1,6 @@
 use nom::{
-    combinator::{flat_map, peek},
+    combinator::peek,
     multi::count,
-    multi::fold_many_m_n,
     number::complete::{be_u16, be_u32, be_u8},
     IResult,
 };

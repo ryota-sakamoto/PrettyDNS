@@ -26,7 +26,7 @@ pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
         count(resource::Resource::read, h.ns_count.into()),
     )(data)
     .unwrap();
-    let (data, ad) = cond(
+    let (_data, ad) = cond(
         h.ar_count > 0,
         count(resource::Resource::read, h.ar_count.into()),
     )(data)
