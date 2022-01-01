@@ -14,9 +14,13 @@ pub struct Message {
 }
 
 pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
-    let mut c = Cursor::new(data);
+    let result = header::Header::read(data);
+    if result.is_err() {
+        return Err(std::io::Error::from(std::io::ErrorKind::Unsupported));
+    }
 
-    let h = header::Header::from_cursor(&mut c).await?;
+    let (data, h) = result.unwrap();
+    let mut c = Cursor::new(data);
     let q = if h.qd_count > 0 {
         Some(query::Query::from_cursor(&mut c).await?)
     } else {
