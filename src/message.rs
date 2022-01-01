@@ -91,6 +91,7 @@ impl Message {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::from_bytes;
 

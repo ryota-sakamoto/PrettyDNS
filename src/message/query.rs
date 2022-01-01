@@ -79,6 +79,7 @@ impl Query {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::Query;
 

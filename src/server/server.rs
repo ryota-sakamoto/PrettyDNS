@@ -136,6 +136,7 @@ pub fn get_domain_list(domain: &str) -> Vec<String> {
     return result;
 }
 
+#[cfg(test)]
 mod tests {
     use super::get_domain_list;
 

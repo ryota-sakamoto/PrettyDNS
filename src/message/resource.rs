@@ -94,6 +94,7 @@ impl Resource {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::Resource;
 

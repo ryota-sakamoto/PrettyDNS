@@ -78,6 +78,7 @@ impl Header {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::Header;
 
