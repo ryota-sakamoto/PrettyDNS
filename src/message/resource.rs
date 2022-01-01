@@ -1,3 +1,10 @@
+use nom::{
+    combinator::{flat_map, peek},
+    multi::count,
+    multi::fold_many_m_n,
+    number::complete::{be_u16, be_u32, be_u8},
+    IResult,
+};
 use std::io::{Cursor, SeekFrom};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
@@ -12,13 +19,39 @@ pub struct Resource {
 }
 
 impl Resource {
-    pub async fn from_cursor(c: &mut Cursor<&[u8]>, count: u16) -> std::io::Result<Vec<Resource>> {
-        let mut result = vec![];
-        for _ in 0..count {
-            let r = Self::_from_cursor(c).await?;
-            result.push(r);
+    pub fn read(data: &[u8]) -> IResult<&[u8], Resource> {
+        let (data, name) = Resource::__read(data)?;
+        let (data, _type) = be_u16(data)?;
+        let (data, class) = be_u16(data)?;
+        let (data, ttl) = be_u32(data)?;
+        let (data, rdlength) = be_u16(data)?;
+        let (data, rdata) = count(be_u8, rdlength.into())(data)?;
+
+        return Ok((
+            data,
+            Resource {
+                name: name,
+                _type: _type,
+                class: class,
+                ttl: ttl,
+                rdlength: rdlength,
+                rdata: rdata,
+            },
+        ));
+    }
+
+    fn __read(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
+        let (data, m1) = peek(be_u8)(data)?;
+
+        // check message compaction
+        if (m1 >> 6) == 3 {
+            let (data, m1) = be_u8(data)?;
+            let (data, m2) = be_u8(data)?;
+
+            return Ok((data, vec![m1, m2]));
+        } else {
+            return crate::message::query::Query::read_domain(data);
         }
-        return Ok(result);
     }
 
     async fn _from_cursor(c: &mut Cursor<&[u8]>) -> std::io::Result<Resource> {
@@ -101,10 +134,8 @@ mod tests {
     #[tokio::test]
     async fn parse_resource() {
         let data: Vec<u8> = vec![192, 12, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238];
-        let mut c = std::io::Cursor::new(data.as_ref());
-        let result = Resource::from_cursor(&mut c, 1).await;
+        let (_, q) = Resource::read(&data).unwrap();
 
-        let ref q = result.unwrap()[0];
         assert_eq!(q.name, vec![192, 12]);
         assert_eq!(q._type, 1);
         assert_eq!(q.class, 1);

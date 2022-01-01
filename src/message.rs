@@ -2,7 +2,7 @@ pub mod header;
 pub mod query;
 pub mod resource;
 
-use std::io::Cursor;
+use nom::{combinator::cond, multi::count};
 
 #[derive(Debug)]
 pub struct Message {
@@ -14,36 +14,23 @@ pub struct Message {
 }
 
 pub async fn from_bytes(data: &[u8]) -> std::io::Result<Message> {
-    let result = header::Header::read(data);
-    if result.is_err() {
-        return Err(std::io::Error::from(std::io::ErrorKind::Unsupported));
-    }
-
-    let (mut data, h) = result.unwrap();
-    let q = if h.qd_count > 0 {
-        let (_data, q) = query::Query::read(data).unwrap();
-        data = _data;
-        Some(q)
-    } else {
-        None
-    };
-
-    let mut c = Cursor::new(data);
-    let a = if h.an_count > 0 {
-        Some(resource::Resource::from_cursor(&mut c, h.an_count).await?)
-    } else {
-        None
-    };
-    let au = if h.ns_count > 0 {
-        Some(resource::Resource::from_cursor(&mut c, h.ns_count).await?)
-    } else {
-        None
-    };
-    let ad = if h.ar_count > 0 {
-        Some(resource::Resource::from_cursor(&mut c, h.ar_count).await?)
-    } else {
-        None
-    };
+    let (data, h) = header::Header::read(data).unwrap();
+    let (data, q) = cond(h.qd_count > 0, query::Query::read)(data).unwrap();
+    let (data, a) = cond(
+        h.an_count > 0,
+        count(resource::Resource::read, h.an_count.into()),
+    )(data)
+    .unwrap();
+    let (data, au) = cond(
+        h.ns_count > 0,
+        count(resource::Resource::read, h.ns_count.into()),
+    )(data)
+    .unwrap();
+    let (data, ad) = cond(
+        h.ar_count > 0,
+        count(resource::Resource::read, h.ar_count.into()),
+    )(data)
+    .unwrap();
 
     return Ok(Message {
         header: h,

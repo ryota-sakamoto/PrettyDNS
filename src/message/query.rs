@@ -1,12 +1,12 @@
 use nom::{
     bytes::complete::take,
-    combinator::{flat_map},
+    combinator::flat_map,
     multi::fold_many0,
     number::complete::{be_u16, be_u8},
     IResult,
 };
 
-use tokio::io::{AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 
 #[derive(Debug)]
 pub struct Query {
@@ -17,8 +17,24 @@ pub struct Query {
 
 impl Query {
     pub fn read(data: &[u8]) -> IResult<&[u8], Query> {
+        let (data, qname) = Query::read_domain(data)?;
+        let qname = String::from_utf8(qname).unwrap();
+        let (data, qtype) = be_u16(data)?;
+        let (data, qclass) = be_u16(data)?;
+
+        return Ok((
+            data,
+            Query {
+                qname: qname,
+                qtype: qtype,
+                qclass: qclass,
+            },
+        ));
+    }
+
+    pub fn read_domain(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
         let (data, qname) = fold_many0(
-            Query::read_domain,
+            Query::_read_domain,
             Vec::new,
             |mut v: Vec<_>, item: &[u8]| {
                 let mut item = item.to_vec();
@@ -34,22 +50,10 @@ impl Query {
             return Err(nom::Err::Incomplete(nom::Needed::new(0)));
         }
 
-        let qname: Vec<u8> = qname.into_iter().flatten().collect();
-        let q = String::from_utf8(qname).unwrap();
-        let (data, qtype) = be_u16(data)?;
-        let (data, qclass) = be_u16(data)?;
-
-        return Ok((
-            data,
-            Query {
-                qname: q,
-                qtype: qtype,
-                qclass: qclass,
-            },
-        ));
+        return Ok((data, qname.into_iter().flatten().collect()));
     }
 
-    fn read_domain(data: &[u8]) -> IResult<&[u8], &[u8]> {
+    fn _read_domain(data: &[u8]) -> IResult<&[u8], &[u8]> {
         let (data, a) = flat_map(be_u8, take)(data)?;
         if a.len() == 0 {
             return Err(nom::Err::Error(nom::error::make_error(

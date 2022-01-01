@@ -1,6 +1,6 @@
 use nom::{number::complete::be_u16, IResult};
 
-use tokio::io::{AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 
 #[derive(Debug)]
 pub struct Header {
