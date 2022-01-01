@@ -39,7 +39,7 @@ pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Messag
 
         match sock.recv_from(&mut buf).await {
             Ok(_v) => {
-                let res = message::from_bytes(&buf).await.unwrap();
+                let (_, res) = message::from_bytes(&buf).unwrap();
                 return Ok(res);
             }
             Err(v) => return Err(v),
@@ -60,7 +60,7 @@ pub async fn forward(req: Message) -> io::Result<Vec<u8>> {
 
         match sock.recv_from(&mut buf).await {
             Ok(v) => {
-                let res = message::from_bytes(&buf).await.unwrap();
+                let (_, res) = message::from_bytes(&buf).unwrap();
                 println!("raw: {:?}", &buf[..v.0]);
                 println!("res: {:?}", res);
                 return Ok(res.to_vec().await?);

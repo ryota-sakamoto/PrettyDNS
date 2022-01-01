@@ -61,7 +61,13 @@ async fn _handler(
     println!("---");
     println!("data: {:?}", buf);
 
-    let req = message::from_bytes(&buf).await?;
+    let result = message::from_bytes(&buf);
+    if result.is_err() {
+        println!("error: {:?}", result.unwrap_err());
+        return Err(std::io::Error::from(std::io::ErrorKind::Other));
+    }
+
+    let (_, req) = result.unwrap();
     println!("req: {:?}", req);
 
     if let Some(q) = &req.query {
