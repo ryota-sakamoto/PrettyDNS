@@ -38,7 +38,7 @@ pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Messag
         let mut buf = [0; 1024];
 
         match sock.recv_from(&mut buf).await {
-            Ok(_v) => {
+            Ok(v) => {
                 let res = message::from_bytes(&buf).await.unwrap();
                 return Ok(res);
             }

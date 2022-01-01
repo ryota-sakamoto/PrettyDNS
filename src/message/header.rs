@@ -1,6 +1,6 @@
 use nom::{number::complete::be_u16, IResult};
-
-use tokio::io::{AsyncWriteExt};
+use std::io::Cursor;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Header {
@@ -79,7 +79,7 @@ impl Header {
 }
 
 mod tests {
-    
+    use super::Header;
 
     #[tokio::test]
     async fn parse_header() {

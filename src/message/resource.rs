@@ -95,7 +95,7 @@ impl Resource {
 }
 
 mod tests {
-    
+    use super::Resource;
 
     #[tokio::test]
     async fn parse_resource() {

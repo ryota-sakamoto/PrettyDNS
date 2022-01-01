@@ -1,12 +1,12 @@
 use nom::{
     bytes::complete::take,
-    combinator::{flat_map},
+    combinator::{cond, flat_map},
     multi::fold_many0,
     number::complete::{be_u16, be_u8},
     IResult,
 };
-
-use tokio::io::{AsyncWriteExt};
+use std::io::Cursor;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 pub struct Query {
@@ -80,7 +80,7 @@ impl Query {
 }
 
 mod tests {
-    
+    use super::Query;
 
     #[tokio::test]
     async fn parse_query() {
