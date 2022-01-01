@@ -88,7 +88,7 @@ mod tests {
             245, 212, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
             109, 0, 0, 1, 0, 1,
         ];
-        let result = from_bytes(&data).unwrap();
+        let (_, result) = from_bytes(&data).unwrap();
 
         assert_eq!(
             result,
