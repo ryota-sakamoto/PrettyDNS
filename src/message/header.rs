@@ -89,21 +89,26 @@ mod tests {
             109, 0, 0, 1, 0, 1,
         ];
         let (_, h) = Header::read(&data).unwrap();
-        assert_eq!(h.id, 50347);
-        assert_eq!(h.qr, 0);
-        assert_eq!(h.opcode, 0);
-        assert_eq!(h.aa, 0);
-        assert_eq!(h.tc, 0);
-        assert_eq!(h.rd, 1);
-        assert_eq!(h.ra, 0);
-        assert_eq!(h.z, 0);
-        assert_eq!(h.ad, 1);
-        assert_eq!(h.cd, 0);
-        assert_eq!(h.rcode, 0);
-        assert_eq!(h.qd_count, 1);
-        assert_eq!(h.an_count, 0);
-        assert_eq!(h.ns_count, 0);
-        assert_eq!(h.ar_count, 0);
+        assert_eq!(
+            h,
+            Header {
+                id: 50347,
+                qr: 0,
+                opcode: 0,
+                aa: 0,
+                tc: 0,
+                rd: 1,
+                ra: 0,
+                z: 0,
+                ad: 1,
+                cd: 0,
+                rcode: 0,
+                qd_count: 1,
+                an_count: 0,
+                ns_count: 0,
+                ar_count: 0,
+            }
+        );
     }
 
     #[tokio::test]

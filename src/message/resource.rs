@@ -88,12 +88,17 @@ mod tests {
         let data: Vec<u8> = vec![192, 12, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238];
         let (_, q) = Resource::read(&data).unwrap();
 
-        assert_eq!(q.name, vec![192, 12]);
-        assert_eq!(q._type, 1);
-        assert_eq!(q.class, 1);
-        assert_eq!(q.ttl, 299);
-        assert_eq!(q.rdlength, 4);
-        assert_eq!(q.rdata, vec![172, 217, 25, 238]);
+        assert_eq!(
+            q,
+            Resource {
+                name: vec![192, 12],
+                _type: 1,
+                class: 1,
+                ttl: 299,
+                rdlength: 4,
+                rdata: vec![172, 217, 25, 238],
+            }
+        );
     }
 
     #[tokio::test]

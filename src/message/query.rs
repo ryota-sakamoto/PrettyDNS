@@ -93,9 +93,14 @@ mod tests {
             6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1,
         ];
         let (_, q) = Query::read(&data).unwrap();
-        assert_eq!(q.qname, "google.com.");
-        assert_eq!(q.qclass, 1);
-        assert_eq!(q.qtype, 1);
+        assert_eq!(
+            q,
+            Query {
+                qname: "google.com.".to_owned(),
+                qclass: 1,
+                qtype: 1,
+            }
+        );
     }
 
     #[tokio::test]
