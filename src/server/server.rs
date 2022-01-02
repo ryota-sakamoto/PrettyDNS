@@ -1,6 +1,10 @@
-use std::{io, sync::Arc};
+use std::{
+    io,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 use tokio::{net::UdpSocket, sync::mpsc};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use tracing_subscriber;
 
 use crate::{
@@ -90,7 +94,7 @@ async fn _handler(
         resolve_list.reverse();
         info!("resolve_list: {:?}", &resolve_list);
 
-        let mut ns = "202.12.27.33:53";
+        let mut ns: SocketAddr = "202.12.27.33:53".parse().unwrap();
         for r in resolve_list {
             let q = Query {
                 qname: r.clone(),
@@ -98,13 +102,28 @@ async fn _handler(
                 qclass: 1,
             };
 
-            info!("resolve: {:?}, ns: {:?}", q, ns);
-            let _result = client::resolve(q, ns).await?;
+            info!("resolve: {:?}", q);
+            let _result = client::resolve(q, ns.clone()).await?;
+            info!("answer: {:?}", _result.answer);
+            if let Some(additional) = _result.additional {
+                for a in additional {
+                    info!("additional: {:?}", a);
+                    if a._type != 1 {
+                        continue;
+                    }
 
-            if r == "com." {
-                ns = "192.5.6.30:53";
-            } else if r == "google.com." {
-                ns = "216.239.34.10:53";
+                    if a.rdata.len() != 4 {
+                        warn!("rdata is not wrong length: {:?}", a.rdata);
+                        continue;
+                    }
+
+                    ns = SocketAddr::new(
+                        IpAddr::V4(Ipv4Addr::new(
+                            a.rdata[0], a.rdata[1], a.rdata[2], a.rdata[3],
+                        )),
+                        53,
+                    );
+                }
             }
         }
 
