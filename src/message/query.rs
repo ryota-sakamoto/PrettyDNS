@@ -1,17 +1,18 @@
 use nom::{
     bytes::complete::take,
-    combinator::flat_map,
+    combinator::{flat_map, map},
     multi::fold_many0,
     number::complete::{be_u16, be_u8},
     IResult,
 };
 
+use crate::message::qtype::QType;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq)]
 pub struct Query {
     pub qname: String,
-    pub qtype: u16,
+    pub qtype: QType,
     pub qclass: u16,
 }
 
@@ -19,7 +20,7 @@ impl Query {
     pub fn read(data: &[u8]) -> IResult<&[u8], Query> {
         let (data, qname) = Query::read_domain(data)?;
         let qname = String::from_utf8(qname).unwrap();
-        let (data, qtype) = be_u16(data)?;
+        let (data, qtype) = map(be_u16, |q| q.into())(data)?;
         let (data, qclass) = be_u16(data)?;
 
         return Ok((
@@ -76,7 +77,7 @@ impl Query {
 
         v.write_all(&qname).await?;
 
-        v.write_u16(self.qtype).await?;
+        v.write_u16(self.qtype.clone().into()).await?;
         v.write_u16(self.qclass).await?;
 
         return Ok(v);
@@ -85,6 +86,7 @@ impl Query {
 
 #[cfg(test)]
 mod tests {
+    use super::QType;
     use super::Query;
 
     #[tokio::test]
@@ -98,7 +100,7 @@ mod tests {
             Query {
                 qname: "google.com.".to_owned(),
                 qclass: 1,
-                qtype: 1,
+                qtype: QType::A,
             }
         );
     }
@@ -108,7 +110,7 @@ mod tests {
         let q = Query {
             qname: "google.com.".to_owned(),
             qclass: 1,
-            qtype: 1,
+            qtype: QType::A.into(),
         };
 
         let result = q.to_vec().await.unwrap();

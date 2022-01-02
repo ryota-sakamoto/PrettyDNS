@@ -3,7 +3,7 @@ use tokio::{net::UdpSocket, sync::mpsc};
 
 use crate::{
     client,
-    message::{self, query::Query},
+    message::{self, qtype::QType, query::Query},
     server::cache,
 };
 
@@ -74,7 +74,7 @@ async fn _handler(
         let mut resolve_list = vec![];
         let domain_list = get_domain_list(&q.qname);
         for v in domain_list {
-            let record = cache::resolve(v.clone(), q.qtype);
+            let record = cache::resolve(v.clone(), q.qtype.clone().into());
             if let Some(_r) = record {
                 break;
             } else {
@@ -89,7 +89,7 @@ async fn _handler(
         for r in resolve_list {
             let q = Query {
                 qname: r.clone(),
-                qtype: 1,
+                qtype: QType::A.into(),
                 qclass: 1,
             };
 
@@ -105,7 +105,7 @@ async fn _handler(
 
         let q = Query {
             qname: q.qname.clone(),
-            qtype: 1,
+            qtype: QType::A.into(),
             qclass: 1,
         };
         println!("resolve: {:?}, ns: {:?}", q, ns);

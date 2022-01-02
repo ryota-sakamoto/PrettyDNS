@@ -1,4 +1,5 @@
 pub mod header;
+pub mod qtype;
 pub mod query;
 pub mod resource;
 
@@ -81,6 +82,7 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use super::from_bytes;
+    use super::qtype::QType;
 
     #[tokio::test]
     async fn parse_message() {
@@ -113,7 +115,7 @@ mod tests {
                 query: Some(super::query::Query {
                     qname: "google.com.".to_owned(),
                     qclass: 1,
-                    qtype: 1,
+                    qtype: QType::A,
                 }),
                 answer: None,
                 authority: None,
