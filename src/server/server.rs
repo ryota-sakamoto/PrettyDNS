@@ -1,5 +1,7 @@
 use std::{io, sync::Arc};
 use tokio::{net::UdpSocket, sync::mpsc};
+use tracing::{error, info};
+use tracing_subscriber;
 
 use crate::{
     client,
@@ -14,6 +16,9 @@ pub struct Config {
 }
 
 pub async fn start(c: Config) -> io::Result<()> {
+    tracing_subscriber::fmt::init();
+    info!("start");
+
     let addr = if c.addr != "" { c.addr } else { "0.0.0.0" };
 
     let port = if c.port != 0 { c.port } else { 53 };
@@ -58,17 +63,17 @@ async fn _handler(
     buf: Vec<u8>,
     addr: std::net::SocketAddr,
 ) -> io::Result<()> {
-    println!("---");
-    println!("data: {:?}", buf);
+    info!("---");
+    info!("data: {:?}", buf);
 
     let result = message::from_bytes(&buf);
     if result.is_err() {
-        println!("error: {:?}", result.unwrap_err());
+        error!("error: {:?}", result.unwrap_err());
         return Err(std::io::Error::from(std::io::ErrorKind::Other));
     }
 
     let (_, req) = result.unwrap();
-    println!("req: {:?}", req);
+    info!("req: {:?}", req);
 
     if let Some(q) = &req.query {
         let mut resolve_list = vec![];
@@ -83,7 +88,7 @@ async fn _handler(
         }
 
         resolve_list.reverse();
-        println!("resolve_list: {:?}", &resolve_list);
+        info!("resolve_list: {:?}", &resolve_list);
 
         let mut ns = "202.12.27.33:53";
         for r in resolve_list {
@@ -93,7 +98,7 @@ async fn _handler(
                 qclass: 1,
             };
 
-            println!("resolve: {:?}, ns: {:?}", q, ns);
+            info!("resolve: {:?}, ns: {:?}", q, ns);
             let _result = client::resolve(q, ns).await?;
 
             if r == "com." {
@@ -108,12 +113,12 @@ async fn _handler(
             qtype: QType::A.into(),
             qclass: 1,
         };
-        println!("resolve: {:?}, ns: {:?}", q, ns);
+        info!("resolve: {:?}, ns: {:?}", q, ns);
         let mut result = client::resolve(q, ns).await?;
         result.header.id = req.header.id;
         sock.send_to(&result.to_vec().await?, addr).await?;
 
-        println!("result: {:?}", result);
+        info!("result: {:?}", result);
     }
 
     Ok(())
