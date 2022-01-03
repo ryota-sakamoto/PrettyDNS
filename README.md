@@ -2,7 +2,7 @@ PrettyDNS
 ===
 
 ```
-$ dig google.com @localhost +noedns
+$ dig google.com @127.0.0.1 +noedns
 ```
 
 ## ref
