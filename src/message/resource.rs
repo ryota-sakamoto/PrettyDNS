@@ -1,4 +1,6 @@
+use crate::message::qtype::QType;
 use nom::{
+    combinator::map,
     combinator::peek,
     multi::count,
     number::complete::{be_u16, be_u32, be_u8},
@@ -9,7 +11,7 @@ use tokio::io::AsyncWriteExt;
 #[derive(Debug, PartialEq)]
 pub struct Resource {
     pub name: Vec<u8>,
-    pub _type: u16,
+    pub _type: QType,
     pub class: u16,
     pub ttl: u32,
     pub rdlength: u16,
@@ -19,7 +21,7 @@ pub struct Resource {
 impl Resource {
     pub fn read(data: &[u8]) -> IResult<&[u8], Resource> {
         let (data, name) = Resource::__read(data)?;
-        let (data, _type) = be_u16(data)?;
+        let (data, _type) = map(be_u16, |q| q.into())(data)?;
         let (data, class) = be_u16(data)?;
         let (data, ttl) = be_u32(data)?;
         let (data, rdlength) = be_u16(data)?;
@@ -67,7 +69,7 @@ impl Resource {
 
         v.write_all(&name).await?;
 
-        v.write_u16(self._type).await?;
+        v.write_u16(self._type.into()).await?;
         v.write_u16(self.class).await?;
         v.write_u32(self.ttl).await?;
         v.write_u16(self.rdlength).await?;
@@ -81,6 +83,7 @@ impl Resource {
 
 #[cfg(test)]
 mod tests {
+    use super::QType;
     use super::Resource;
 
     #[tokio::test]
@@ -92,7 +95,7 @@ mod tests {
             q,
             Resource {
                 name: vec![192, 12],
-                _type: 1,
+                _type: QType::A,
                 class: 1,
                 ttl: 299,
                 rdlength: 4,
@@ -105,7 +108,7 @@ mod tests {
     async fn write_resource() {
         let h = Resource {
             name: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
-            _type: 1,
+            _type: QType::A,
             class: 1,
             ttl: 299,
             rdlength: 4,

@@ -103,12 +103,12 @@ async fn _handler(
             };
 
             info!("resolve: {:?}, ns: {:?}", q, ns);
-            let _result = client::resolve(q, ns.clone()).await?;
+            let _result = client::resolve(q, ns).await?;
             info!("answer: {:?}", _result.answer);
             if let Some(additional) = _result.additional {
                 for a in additional {
                     info!("additional: {:?}", a);
-                    if a._type != 1 {
+                    if a._type != QType::A {
                         continue;
                     }
 
@@ -129,7 +129,7 @@ async fn _handler(
 
         let q = Query {
             qname: q.qname.clone(),
-            qtype: q.qtype.clone(),
+            qtype: q.qtype,
             qclass: 1,
         };
         info!("resolve: {:?}, ns: {:?}", q, ns);

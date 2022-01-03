@@ -77,7 +77,7 @@ impl Query {
 
         v.write_all(&qname).await?;
 
-        v.write_u16(self.qtype.clone().into()).await?;
+        v.write_u16(self.qtype.into()).await?;
         v.write_u16(self.qclass).await?;
 
         return Ok(v);
