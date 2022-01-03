@@ -98,7 +98,7 @@ async fn _handler(
         for r in resolve_list {
             let q = Query {
                 qname: r.clone(),
-                qtype: QType::A.into(),
+                qtype: QType::NS.into(),
                 qclass: 1,
             };
 
@@ -129,7 +129,7 @@ async fn _handler(
 
         let q = Query {
             qname: q.qname.clone(),
-            qtype: QType::A.into(),
+            qtype: q.qtype.clone(),
             qclass: 1,
         };
         info!("resolve: {:?}, ns: {:?}", q, ns);
