@@ -102,7 +102,7 @@ async fn _handler(
                 qclass: 1,
             };
 
-            info!("resolve: {:?}", q);
+            info!("resolve: {:?}, ns: {:?}", q, ns);
             let _result = client::resolve(q, ns.clone()).await?;
             info!("answer: {:?}", _result.answer);
             if let Some(additional) = _result.additional {
