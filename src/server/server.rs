@@ -70,7 +70,7 @@ async fn _handler(
     info!("---");
     info!("data: {:?}", buf);
 
-    let result = message::from_bytes(&buf);
+    let result = message::message::from_bytes(&buf);
     if result.is_err() {
         error!("error: {:?}", result.unwrap_err());
         return Err(std::io::Error::from(std::io::ErrorKind::Other));
