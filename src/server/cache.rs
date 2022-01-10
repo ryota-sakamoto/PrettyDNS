@@ -66,7 +66,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_resolve_some() {
-        let domain = "example.com.".to_owned();
+        let domain = "test.example.com.".to_owned();
         let resource = Resource {
             name: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
             _type: QType::A,
