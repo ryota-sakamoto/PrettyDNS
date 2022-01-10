@@ -8,7 +8,7 @@ use nom::{
 };
 use tokio::io::AsyncWriteExt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Resource {
     pub name: Vec<u8>,
     pub _type: QType,

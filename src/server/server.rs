@@ -73,12 +73,10 @@ async fn handler(buf: Vec<u8>) -> io::Result<message::message::Message> {
     let mut resolve_list = vec![];
     let domain_list = get_domain_list(&q.qname);
     for v in domain_list {
-        let record = cache::resolve(v.clone(), q.qtype.clone().into());
-        if let Some(_r) = record {
-            break;
-        } else {
-            resolve_list.push(v);
-        }
+        resolve_list.push(v.clone());
+
+        let record = cache::resolve(v);
+        info!("cache: {:?}", record);
     }
 
     resolve_list.reverse();
@@ -97,7 +95,7 @@ async fn handler(buf: Vec<u8>) -> io::Result<message::message::Message> {
         info!("answer: {:?}", _result.answer);
         if let Some(additional) = _result.additional {
             for a in additional {
-                info!("additional: {:?}", a);
+                // info!("additional: {:?}", a);
                 if a._type != QType::A {
                     continue;
                 }
@@ -117,16 +115,20 @@ async fn handler(buf: Vec<u8>) -> io::Result<message::message::Message> {
         }
     }
 
-    let q = Query {
-        qname: q.qname.clone(),
+    let domain = q.qname;
+    let query = Query {
+        qname: domain.clone(),
         qtype: q.qtype,
         qclass: 1,
     };
-    info!("resolve: {:?}, ns: {:?}", q, ns);
-    let mut result = client::resolve(q, ns).await?;
+    info!("resolve: {:?}, ns: {:?}", query, ns);
+    let mut result = client::resolve(query, ns).await?;
     result.header.id = req.header.id;
 
     info!("result: {:?}", result);
+    if let Some(answer) = result.answer.as_ref() {
+        cache::cache(domain, answer.clone()).unwrap();
+    }
 
     Ok(result)
 }
