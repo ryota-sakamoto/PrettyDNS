@@ -12,6 +12,7 @@ pretty_dns_server = { path = "./pretty_dns_server" }
 
 [workspace]
 members = [
+    "pretty_dns_cache",
     "pretty_dns_client",
     "pretty_dns_server",
     "pretty_dns_message",

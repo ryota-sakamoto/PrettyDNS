@@ -225,6 +225,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pretty_dns_cache"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "once_cell",
+ "pretty_dns_message",
+ "tracing",
+]
+
+[[package]]
 name = "pretty_dns_client"
 version = "0.1.0"
 dependencies = [
@@ -245,8 +255,7 @@ dependencies = [
 name = "pretty_dns_server"
 version = "0.1.0"
 dependencies = [
- "chrono",
- "once_cell",
+ "pretty_dns_cache",
  "pretty_dns_client",
  "pretty_dns_message",
  "tokio",

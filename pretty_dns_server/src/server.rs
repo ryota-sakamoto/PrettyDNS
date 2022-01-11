@@ -7,7 +7,7 @@ use tokio::net::UdpSocket;
 use tracing::{error, info, warn};
 use tracing_subscriber;
 
-use crate::cache;
+use pretty_dns_cache::cache;
 use pretty_dns_client::client;
 use pretty_dns_message::{message, qtype::QType, query::Query};
 

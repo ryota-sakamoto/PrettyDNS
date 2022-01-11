@@ -57,15 +57,15 @@ mod tests {
     use super::{cache, resolve};
     use pretty_dns_message::{qtype::QType, resource::Resource};
 
-    #[tokio::test]
-    async fn test_resolve_none() {
+    #[test]
+    fn test_resolve_none() {
         let domain = "example.com.".to_owned();
         let list = resolve(domain);
         assert_eq!(list, None);
     }
 
-    #[tokio::test]
-    async fn test_resolve_some() {
+    #[test]
+    fn test_resolve_some() {
         let domain = "test.example.com.".to_owned();
         let resource = Resource {
             name: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
