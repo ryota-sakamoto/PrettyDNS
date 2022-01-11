@@ -1,4 +1,4 @@
-use crate::message::qtype::QType;
+use crate::qtype::QType;
 use nom::{
     combinator::map,
     combinator::peek,
@@ -50,7 +50,7 @@ impl Resource {
 
             return Ok((data, vec![m1, m2]));
         } else {
-            return crate::message::query::Query::read_domain(data);
+            return crate::query::Query::read_domain(data);
         }
     }
 

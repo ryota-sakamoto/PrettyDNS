@@ -7,11 +7,9 @@ use tokio::net::UdpSocket;
 use tracing::{error, info, warn};
 use tracing_subscriber;
 
-use crate::{
-    client,
-    message::{self, qtype::QType, query::Query},
-    server::cache,
-};
+use crate::cache;
+use pretty_dns_client::client;
+use pretty_dns_message::{message, qtype::QType, query::Query};
 
 #[derive(Default)]
 pub struct Config {
@@ -52,11 +50,11 @@ pub async fn start(c: Config) -> io::Result<()> {
     return Ok(());
 }
 
-async fn handler(buf: Vec<u8>) -> io::Result<message::message::Message> {
+async fn handler(buf: Vec<u8>) -> io::Result<message::Message> {
     info!("---");
     info!("data: {:?}", buf);
 
-    let result = message::message::from_bytes(&buf);
+    let result = message::from_bytes(&buf);
     if result.is_err() {
         error!("error: {:?}", result.unwrap_err());
         return Err(std::io::Error::from(std::io::ErrorKind::Other));

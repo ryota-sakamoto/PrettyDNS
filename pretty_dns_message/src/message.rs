@@ -1,4 +1,4 @@
-use crate::message::*;
+use crate::{header, query, resource};
 use nom::{combinator::cond, multi::count, IResult};
 
 #[derive(Debug, PartialEq)]
@@ -78,7 +78,7 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use super::from_bytes;
-    use super::qtype::QType;
+    use crate::qtype::QType;
 
     #[tokio::test]
     async fn parse_message() {

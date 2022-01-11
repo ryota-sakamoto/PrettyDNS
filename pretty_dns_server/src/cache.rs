@@ -1,6 +1,6 @@
-use crate::message::resource::Resource;
 use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
+use pretty_dns_message::resource::Resource;
 use std::{collections::HashMap, sync::Mutex};
 use tracing::info;
 
@@ -55,7 +55,7 @@ pub fn cache(domain: String, data: Vec<Resource>) -> Result<(), ()> {
 #[cfg(test)]
 mod tests {
     use super::{cache, resolve};
-    use crate::message::{qtype::QType, resource::Resource};
+    use pretty_dns_message::{qtype::QType, resource::Resource};
 
     #[tokio::test]
     async fn test_resolve_none() {

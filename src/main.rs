@@ -1,4 +1,4 @@
-use pretty_dns::server;
+use pretty_dns_server::server;
 use std::io;
 
 #[tokio::main]

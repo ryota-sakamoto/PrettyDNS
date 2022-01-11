@@ -6,7 +6,7 @@ use nom::{
     IResult,
 };
 
-use crate::message::qtype::QType;
+use crate::qtype::QType;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq)]
