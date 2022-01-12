@@ -77,7 +77,7 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
                 cd: 0,
                 rcode: 0,
                 qd_count: 1,
-                an_count: 1,
+                an_count: answer.data.len() as u16,
                 ns_count: 0,
                 ar_count: 0,
             },
