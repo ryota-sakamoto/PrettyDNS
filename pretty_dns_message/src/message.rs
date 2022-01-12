@@ -26,7 +26,7 @@ impl Message {
             h.ar_count > 0,
             count(resource::Resource::read, h.ar_count.into()),
         )(data)?;
-    
+
         return Ok((
             data,
             Message {
