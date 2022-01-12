@@ -1,3 +1,8 @@
+use pretty_dns_cache::cache;
+use pretty_dns_client::client;
+use pretty_dns_message::{
+    domain::Domain, header::Header, message::Message, qtype::QType, query::Query,
+};
 use std::{
     io,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -5,10 +10,6 @@ use std::{
 };
 use tokio::net::UdpSocket;
 use tracing::{debug, error, info, warn};
-
-use pretty_dns_cache::cache;
-use pretty_dns_client::client;
-use pretty_dns_message::{header::Header, message::Message, qtype::QType, query::Query};
 
 #[derive(Debug)]
 pub struct Config {
@@ -62,7 +63,7 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     }
 
     let q = req.query.unwrap();
-    if let Some(answer) = cache::resolve(q.qname.clone(), q.qtype) {
+    if let Some(answer) = cache::resolve(q.qname.to_string(), q.qtype) {
         return Ok(Message {
             header: Header {
                 id: req.header.id,
@@ -89,7 +90,7 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     }
 
     let mut resolve_list = vec![];
-    let domain_list = get_domain_list(&q.qname);
+    let domain_list = get_domain_list(&q.qname.to_string());
     for v in domain_list {
         resolve_list.push(v.clone());
 
@@ -103,7 +104,7 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     let mut ns: SocketAddr = "202.12.27.33:53".parse().unwrap();
     for r in resolve_list {
         let q = Query {
-            qname: r.clone(),
+            qname: Domain::from(r),
             qtype: QType::NS.into(),
             qclass: 1,
         };
@@ -133,9 +134,10 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
         }
     }
 
-    let domain = q.qname;
+    let qname = q.qname;
+    let domain = qname.to_string();
     let query = Query {
-        qname: domain.clone(),
+        qname: qname,
         qtype: q.qtype,
         qclass: 1,
     };

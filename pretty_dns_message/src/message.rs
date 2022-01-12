@@ -78,6 +78,7 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use super::Message;
+    use crate::domain::Domain;
     use crate::qtype::QType;
 
     #[tokio::test]
@@ -109,7 +110,7 @@ mod tests {
                     ar_count: 0,
                 },
                 query: Some(super::query::Query {
-                    qname: "google.com.".to_owned(),
+                    qname: Domain::from(b"google.com.".to_vec()),
                     qclass: 1,
                     qtype: QType::A,
                 }),

@@ -1,3 +1,4 @@
+use crate::{domain::Domain, qtype::QType};
 use nom::{
     bytes::complete::take,
     combinator::{flat_map, map},
@@ -5,13 +6,11 @@ use nom::{
     number::complete::{be_u16, be_u8},
     IResult,
 };
-
-use crate::qtype::QType;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq)]
 pub struct Query {
-    pub qname: String,
+    pub qname: Domain,
     pub qtype: QType,
     pub qclass: u16,
 }
@@ -19,14 +18,13 @@ pub struct Query {
 impl Query {
     pub fn read(data: &[u8]) -> IResult<&[u8], Query> {
         let (data, qname) = Query::read_domain(data)?;
-        let qname = String::from_utf8(qname).unwrap();
         let (data, qtype) = map(be_u16, |q| q.into())(data)?;
         let (data, qclass) = be_u16(data)?;
 
         return Ok((
             data,
             Query {
-                qname: qname,
+                qname: Domain::from(qname),
                 qtype: qtype,
                 qclass: qclass,
             },
@@ -70,9 +68,9 @@ impl Query {
         let mut v = vec![];
 
         let mut qname = vec![];
-        for v in self.qname.split(|v| v == '.') {
+        for v in self.qname.split('.') {
             qname.push(v.len() as u8);
-            qname.extend_from_slice(v.as_bytes());
+            qname.extend_from_slice(v.as_ref());
         }
 
         v.write_all(&qname).await?;
@@ -88,6 +86,7 @@ impl Query {
 mod tests {
     use super::QType;
     use super::Query;
+    use crate::domain::Domain;
 
     #[tokio::test]
     async fn parse_query() {
@@ -98,7 +97,7 @@ mod tests {
         assert_eq!(
             q,
             Query {
-                qname: "google.com.".to_owned(),
+                qname: Domain::from(b"google.com.".to_vec()),
                 qclass: 1,
                 qtype: QType::A,
             }
@@ -108,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn write_query() {
         let q = Query {
-            qname: "google.com.".to_owned(),
+            qname: Domain::from(b"google.com.".to_vec()),
             qclass: 1,
             qtype: QType::A.into(),
         };
