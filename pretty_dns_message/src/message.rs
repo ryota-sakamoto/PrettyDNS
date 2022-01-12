@@ -10,35 +10,35 @@ pub struct Message {
     pub additional: Option<Vec<resource::Resource>>,
 }
 
-pub fn from_bytes(data: &[u8]) -> IResult<&[u8], Message> {
-    let (data, h) = header::Header::read(data)?;
-    let (data, q) = cond(h.qd_count > 0, query::Query::read)(data)?;
-    let (data, a) = cond(
-        h.an_count > 0,
-        count(resource::Resource::read, h.an_count.into()),
-    )(data)?;
-    let (data, au) = cond(
-        h.ns_count > 0,
-        count(resource::Resource::read, h.ns_count.into()),
-    )(data)?;
-    let (_data, ad) = cond(
-        h.ar_count > 0,
-        count(resource::Resource::read, h.ar_count.into()),
-    )(data)?;
-
-    return Ok((
-        data,
-        Message {
-            header: h,
-            query: q,
-            answer: a,
-            authority: au,
-            additional: ad,
-        },
-    ));
-}
-
 impl Message {
+    pub fn from_bytes(data: &[u8]) -> IResult<&[u8], Message> {
+        let (data, h) = header::Header::read(data)?;
+        let (data, q) = cond(h.qd_count > 0, query::Query::read)(data)?;
+        let (data, a) = cond(
+            h.an_count > 0,
+            count(resource::Resource::read, h.an_count.into()),
+        )(data)?;
+        let (data, au) = cond(
+            h.ns_count > 0,
+            count(resource::Resource::read, h.ns_count.into()),
+        )(data)?;
+        let (_data, ad) = cond(
+            h.ar_count > 0,
+            count(resource::Resource::read, h.ar_count.into()),
+        )(data)?;
+    
+        return Ok((
+            data,
+            Message {
+                header: h,
+                query: q,
+                answer: a,
+                authority: au,
+                additional: ad,
+            },
+        ));
+    }
+
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut result = vec![];
 
@@ -77,7 +77,7 @@ impl Message {
 
 #[cfg(test)]
 mod tests {
-    use super::from_bytes;
+    use super::Message;
     use crate::qtype::QType;
 
     #[tokio::test]
@@ -86,7 +86,7 @@ mod tests {
             245, 212, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
             109, 0, 0, 1, 0, 1,
         ];
-        let (_, result) = from_bytes(&data).unwrap();
+        let (_, result) = Message::from_bytes(&data).unwrap();
 
         assert_eq!(
             result,

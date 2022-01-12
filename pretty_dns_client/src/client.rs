@@ -1,4 +1,4 @@
-use pretty_dns_message::{header::Header, message, message::Message, query::Query};
+use pretty_dns_message::{header::Header, message::Message, query::Query};
 use std::io;
 use tokio::{
     net::{ToSocketAddrs, UdpSocket},
@@ -39,7 +39,7 @@ pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Messag
 
         match sock.recv_from(&mut buf).await {
             Ok(_v) => {
-                let (_, res) = message::from_bytes(&buf).unwrap();
+                let (_, res) = Message::from_bytes(&buf).unwrap();
                 return Ok(res);
             }
             Err(v) => return Err(v),
@@ -60,7 +60,7 @@ pub async fn forward(req: Message) -> io::Result<Vec<u8>> {
 
         match sock.recv_from(&mut buf).await {
             Ok(v) => {
-                let (_, res) = message::from_bytes(&buf).unwrap();
+                let (_, res) = Message::from_bytes(&buf).unwrap();
                 info!("raw: {:?}", &buf[..v.0]);
                 info!("res: {:?}", res);
                 return Ok(res.to_vec().await?);

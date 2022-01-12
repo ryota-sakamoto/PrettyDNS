@@ -8,16 +8,16 @@ use tracing::{debug, error, info, warn};
 
 use pretty_dns_cache::cache;
 use pretty_dns_client::client;
-use pretty_dns_message::{message, qtype::QType, query::Query};
+use pretty_dns_message::{message::Message, qtype::QType, query::Query};
 
+#[derive(Debug)]
 pub struct Config {
     pub addr: Ipv4Addr,
     pub port: u16,
 }
 
 pub async fn start(c: Config) -> io::Result<()> {
-    info!("start");
-    debug!("debug");
+    debug!("start: {:?}", c);
 
     let sock = UdpSocket::bind((c.addr, c.port)).await?;
     let sock = Arc::new(sock);
@@ -44,18 +44,18 @@ pub async fn start(c: Config) -> io::Result<()> {
     return Ok(());
 }
 
-async fn handler(buf: Vec<u8>) -> io::Result<message::Message> {
-    info!("---");
-    info!("data: {:?}", buf);
+async fn handler(buf: Vec<u8>) -> io::Result<Message> {
+    debug!("---");
+    debug!("data: {:?}", buf);
 
-    let result = message::from_bytes(&buf);
+    let result = Message::from_bytes(&buf);
     if result.is_err() {
         error!("error: {:?}", result.unwrap_err());
         return Err(std::io::Error::from(std::io::ErrorKind::Other));
     }
 
     let (_, req) = result.unwrap();
-    info!("req: {:?}", req);
+    debug!("req: {:?}", req);
 
     if req.query.is_none() {
         return Err(std::io::Error::from(std::io::ErrorKind::Other));
@@ -68,11 +68,11 @@ async fn handler(buf: Vec<u8>) -> io::Result<message::Message> {
         resolve_list.push(v.clone());
 
         let record = cache::resolve(v);
-        info!("cache: {:?}", record);
+        debug!("cache: {:?}", record);
     }
 
     resolve_list.reverse();
-    info!("resolve_list: {:?}", &resolve_list);
+    debug!("resolve_list: {:?}", &resolve_list);
 
     let mut ns: SocketAddr = "202.12.27.33:53".parse().unwrap();
     for r in resolve_list {
@@ -82,12 +82,12 @@ async fn handler(buf: Vec<u8>) -> io::Result<message::Message> {
             qclass: 1,
         };
 
-        info!("resolve: {:?}, ns: {:?}", q, ns);
+        debug!("resolve: {:?}, ns: {:?}", q, ns);
         let _result = client::resolve(q, ns).await?;
-        info!("answer: {:?}", _result.answer);
+        debug!("answer: {:?}", _result.answer);
         if let Some(additional) = _result.additional {
             for a in additional {
-                // info!("additional: {:?}", a);
+                // debug!("additional: {:?}", a);
                 if a._type != QType::A {
                     continue;
                 }
@@ -113,11 +113,11 @@ async fn handler(buf: Vec<u8>) -> io::Result<message::Message> {
         qtype: q.qtype,
         qclass: 1,
     };
-    info!("resolve: {:?}, ns: {:?}", query, ns);
+    debug!("resolve: {:?}, ns: {:?}", query, ns);
     let mut result = client::resolve(query, ns).await?;
     result.header.id = req.header.id;
 
-    info!("result: {:?}", result);
+    debug!("result: {:?}", result);
     if let Some(answer) = result.answer.as_ref() {
         cache::cache(domain, answer.clone()).unwrap();
     }
