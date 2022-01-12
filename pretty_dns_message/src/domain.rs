@@ -1,13 +1,5 @@
-use std::fmt;
-
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Domain(Vec<u8>);
-
-impl<'a> fmt::Debug for Domain {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Domain").field(&self.0).finish()
-    }
-}
 
 impl<T> From<T> for Domain
 where
