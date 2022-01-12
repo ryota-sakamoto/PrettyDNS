@@ -67,14 +67,7 @@ impl Query {
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut v = vec![];
 
-        let mut qname = vec![];
-        for v in self.qname.split('.') {
-            qname.push(v.len() as u8);
-            qname.extend_from_slice(v.as_ref());
-        }
-
-        v.write_all(&qname).await?;
-
+        v.write_all(&self.qname.to_vec()).await?;
         v.write_u16(self.qtype.into()).await?;
         v.write_u16(self.qclass).await?;
 

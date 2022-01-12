@@ -35,6 +35,16 @@ impl Domain {
 
         return result;
     }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        let mut qname = vec![];
+        for v in self.split('.') {
+            qname.push(v.len() as u8);
+            qname.extend_from_slice(v.as_ref());
+        }
+
+        return qname;
+    }
 }
 
 #[cfg(test)]
@@ -52,6 +62,16 @@ mod tests {
                 vec![99, 111, 109],
                 vec![]
             ]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_to_vec() {
+        let domain = Domain(b"google.com.".to_vec());
+        let result = domain.to_vec();
+        assert_eq!(
+            result,
+            [6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0]
         );
     }
 }
