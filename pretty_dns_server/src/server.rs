@@ -4,28 +4,22 @@ use std::{
     sync::Arc,
 };
 use tokio::net::UdpSocket;
-use tracing::{error, info, warn};
-use tracing_subscriber;
+use tracing::{debug, error, info, warn};
 
 use pretty_dns_cache::cache;
 use pretty_dns_client::client;
 use pretty_dns_message::{message, qtype::QType, query::Query};
 
-#[derive(Default)]
 pub struct Config {
-    addr: &'static str,
-    port: u64,
+    pub addr: Ipv4Addr,
+    pub port: u16,
 }
 
 pub async fn start(c: Config) -> io::Result<()> {
-    tracing_subscriber::fmt::init();
     info!("start");
+    debug!("debug");
 
-    let addr = if c.addr != "" { c.addr } else { "0.0.0.0" };
-
-    let port = if c.port != 0 { c.port } else { 53 };
-
-    let sock = UdpSocket::bind(format!("{}:{}", addr, port)).await?;
+    let sock = UdpSocket::bind((c.addr, c.port)).await?;
     let sock = Arc::new(sock);
 
     let mut buf = [0; 1024];
