@@ -285,6 +285,7 @@ dependencies = [
 name = "pretty_dns_message"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "nom",
  "tokio",
 ]

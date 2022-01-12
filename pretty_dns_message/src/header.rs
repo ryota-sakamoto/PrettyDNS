@@ -1,5 +1,6 @@
+use bitflags::bitflags;
 use nom::{number::complete::be_u16, IResult};
-
+use std::ops::BitAnd;
 use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq)]
@@ -21,6 +22,29 @@ pub struct Header {
     pub ar_count: u16,
 }
 
+bitflags! {
+    struct HeaderDataFlags: u16 {
+        const QR =     0b1000000000000000;
+        const OPCODE = 0b0111100000000000;
+        const AA =     0b0000010000000000;
+        const TC =     0b0000001000000000;
+        const RD =     0b0000000100000000;
+        const RA =     0b0000000010000000;
+        const Z =      0b0000000001000000;
+        const AD =     0b0000000000100000;
+        const CD =     0b0000000000010000;
+        const RCODE =  0b0000000000001111;
+    }
+}
+
+impl BitAnd<HeaderDataFlags> for u16 {
+    type Output = Self;
+
+    fn bitand(self, other: HeaderDataFlags) -> Self {
+        self & other.bits
+    }
+}
+
 impl Header {
     pub fn read(data: &[u8]) -> IResult<&[u8], Header> {
         let (data, id) = be_u16(data)?;
@@ -34,16 +58,16 @@ impl Header {
             data,
             Header {
                 id: id,
-                qr: ((flag & (1 << 15)) != 0) as u8,
-                opcode: (flag & 0b0111100000000000) as u8,
-                aa: ((flag & (1 << 10)) != 0) as u8,
-                tc: ((flag & (1 << 9)) != 0) as u8,
-                rd: ((flag & (1 << 8)) != 0) as u8,
-                ra: ((flag & (1 << 7)) != 0) as u8,
-                z: ((flag & (1 << 6)) != 0) as u8,
-                ad: ((flag & (1 << 5)) != 0) as u8,
-                cd: ((flag & (1 << 4)) != 0) as u8,
-                rcode: (flag & 0b1111) as u8,
+                qr: ((flag & HeaderDataFlags::QR) != 0) as u8,
+                opcode: (flag & HeaderDataFlags::OPCODE) as u8,
+                aa: ((flag & HeaderDataFlags::AA) != 0) as u8,
+                tc: ((flag & HeaderDataFlags::TC) != 0) as u8,
+                rd: ((flag & HeaderDataFlags::RD) != 0) as u8,
+                ra: ((flag & HeaderDataFlags::RA) != 0) as u8,
+                z: ((flag & HeaderDataFlags::Z) != 0) as u8,
+                ad: ((flag & HeaderDataFlags::AD) != 0) as u8,
+                cd: ((flag & HeaderDataFlags::CD) != 0) as u8,
+                rcode: (flag & HeaderDataFlags::RCODE) as u8,
                 qd_count: qd_count,
                 an_count: an_count,
                 ns_count: ns_count,
