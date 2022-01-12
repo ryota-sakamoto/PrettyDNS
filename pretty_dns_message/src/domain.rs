@@ -9,14 +9,11 @@ impl<'a> fmt::Debug for Domain {
     }
 }
 
-impl From<Vec<u8>> for Domain {
-    fn from(data: Vec<u8>) -> Domain {
-        return Domain(data);
-    }
-}
-
-impl From<String> for Domain {
-    fn from(data: String) -> Domain {
+impl<T> From<T> for Domain
+where
+    T: Into<Vec<u8>>,
+{
+    fn from(data: T) -> Domain {
         return Domain(data.into());
     }
 }
