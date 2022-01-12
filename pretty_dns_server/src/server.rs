@@ -8,7 +8,7 @@ use tracing::{debug, error, info, warn};
 
 use pretty_dns_cache::cache;
 use pretty_dns_client::client;
-use pretty_dns_message::{message::Message, qtype::QType, query::Query};
+use pretty_dns_message::{header::Header, message::Message, qtype::QType, query::Query};
 
 #[derive(Debug)]
 pub struct Config {
@@ -62,12 +62,38 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     }
 
     let q = req.query.unwrap();
+    if let Some(answer) = cache::resolve(q.qname.clone(), q.qtype) {
+        return Ok(Message {
+            header: Header {
+                id: req.header.id,
+                qr: 1,
+                opcode: 0,
+                aa: 0,
+                tc: 0,
+                rd: 1,
+                ra: 0,
+                z: 0,
+                ad: 1,
+                cd: 0,
+                rcode: 0,
+                qd_count: 1,
+                an_count: 1,
+                ns_count: 0,
+                ar_count: 0,
+            },
+            query: Some(q),
+            answer: Some(answer.data),
+            authority: None,
+            additional: None,
+        });
+    }
+
     let mut resolve_list = vec![];
     let domain_list = get_domain_list(&q.qname);
     for v in domain_list {
         resolve_list.push(v.clone());
 
-        let record = cache::resolve(v);
+        let record = cache::resolve(v, QType::NS);
         debug!("cache: {:?}", record);
     }
 
@@ -119,7 +145,7 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
 
     debug!("result: {:?}", result);
     if let Some(answer) = result.answer.as_ref() {
-        cache::cache(domain, answer.clone()).unwrap();
+        cache::cache(domain, q.qtype, answer.clone()).unwrap();
     }
 
     Ok(result)

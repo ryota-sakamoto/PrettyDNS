@@ -1,28 +1,29 @@
 use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
-use pretty_dns_message::resource::Resource;
+use pretty_dns_message::{qtype::QType, resource::Resource};
 use std::{collections::HashMap, sync::Mutex};
 use tracing::info;
 
-static CACHE: Lazy<Mutex<HashMap<String, Record>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static CACHE: Lazy<Mutex<HashMap<(String, QType), Record>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Record {
     cached_at: DateTime<Utc>,
-    data: Vec<Resource>,
+    pub data: Vec<Resource>,
 }
 
-pub fn resolve(domain: String) -> Option<Record> {
+pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
     info!("resolve: {:?}", domain);
     let mut c = CACHE.lock().unwrap();
-    let mut r = c.get(&domain)?.clone();
+    let mut r = c.get(&(domain.clone(), qtype))?.clone();
 
     let now = Utc::now();
     let diff = (now - r.cached_at).num_seconds() as u32;
 
     for v in r.data.iter() {
         if v.ttl <= diff {
-            c.remove(&domain);
+            c.remove(&(domain, qtype));
             return None;
         }
     }
@@ -38,12 +39,12 @@ pub fn resolve(domain: String) -> Option<Record> {
     return Some(r);
 }
 
-pub fn cache(domain: String, data: Vec<Resource>) -> Result<(), ()> {
+pub fn cache(domain: String, qtype: QType, data: Vec<Resource>) -> Result<(), ()> {
     info!("cache: {:?}", domain);
 
     let mut c = CACHE.lock().unwrap();
     c.insert(
-        domain,
+        (domain, qtype),
         Record {
             cached_at: Utc::now(),
             data: data,
@@ -60,7 +61,7 @@ mod tests {
     #[test]
     fn test_resolve_none() {
         let domain = "example.com.".to_owned();
-        let list = resolve(domain);
+        let list = resolve(domain, QType::A);
         assert_eq!(list, None);
     }
 
@@ -75,9 +76,9 @@ mod tests {
             rdlength: 4,
             rdata: vec![172, 217, 25, 238],
         };
-        cache(domain.clone(), vec![resource]).unwrap();
+        cache(domain.clone(), QType::A, vec![resource]).unwrap();
 
-        let list = resolve(domain);
+        let list = resolve(domain, QType::A);
         assert!(list.is_some());
     }
 }
