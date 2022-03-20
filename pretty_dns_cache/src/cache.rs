@@ -10,7 +10,14 @@ static CACHE: Lazy<Mutex<HashMap<(String, QType), Record>>> =
 #[derive(Clone, Debug, PartialEq)]
 pub struct Record {
     cached_at: DateTime<Utc>,
-    pub data: Vec<Resource>,
+    pub data: CacheData,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CacheData {
+    pub answer: Option<Vec<Resource>>,
+    pub authority: Option<Vec<Resource>>,
+    pub additional: Option<Vec<Resource>>,
 }
 
 pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
@@ -18,28 +25,59 @@ pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
     let mut c = CACHE.lock().unwrap();
     let mut r = c.get(&(domain.clone(), qtype))?.clone();
 
-    let now = Utc::now();
-    let diff = (now - r.cached_at).num_seconds() as u32;
-
-    for v in r.data.iter() {
-        if v.ttl <= diff {
-            c.remove(&(domain, qtype));
-            return None;
-        }
+    if r.expired() {
+        c.remove(&(domain, qtype));
+        return None;
     }
 
-    let mut data = r.data.clone();
-    for (i, v) in r.data.iter().enumerate() {
-        data[i].ttl = v.ttl - diff;
-    }
-
-    // cache(domain, data.clone()).unwrap();
-    r.data = data;
+    r.update_ttl();
 
     return Some(r);
 }
 
-pub fn cache(domain: String, qtype: QType, data: Vec<Resource>) -> Result<(), ()> {
+impl Record {
+    fn expired(&self) -> bool {
+        let now = Utc::now();
+        let diff = (now - self.cached_at).num_seconds() as u32;
+
+        if let Some(answer) = &self.data.answer {
+            return answer.iter().any(|v| v.ttl <= diff);
+        } else {
+            return false;
+        }
+    }
+
+    fn update_ttl(&mut self) {
+        let now = Utc::now();
+        let diff = (now - self.cached_at).num_seconds() as u32;
+
+        if let Some(v) = self.data.answer.as_mut() {
+            for i in 0..v.len() {
+                v[i].ttl = v[i].ttl - diff;
+            }
+        }
+
+        if let Some(v) = self.data.authority.as_mut() {
+            for i in 0..v.len() {
+                v[i].ttl = v[i].ttl - diff;
+            }
+        }
+
+        if let Some(v) = self.data.additional.as_mut() {
+            for i in 0..v.len() {
+                v[i].ttl = v[i].ttl - diff;
+            }
+        }
+    }
+}
+
+pub fn cache(
+    domain: String,
+    qtype: QType,
+    answer: &Option<Vec<Resource>>,
+    authority: &Option<Vec<Resource>>,
+    additional: &Option<Vec<Resource>>,
+) -> Result<(), ()> {
     info!("cache: {:?}", domain);
 
     let mut c = CACHE.lock().unwrap();
@@ -47,7 +85,11 @@ pub fn cache(domain: String, qtype: QType, data: Vec<Resource>) -> Result<(), ()
         (domain, qtype),
         Record {
             cached_at: Utc::now(),
-            data: data,
+            data: CacheData {
+                answer: answer.clone(),
+                authority: authority.clone(),
+                additional: additional.clone(),
+            },
         },
     );
     return Ok(());
@@ -76,7 +118,14 @@ mod tests {
             rdlength: 4,
             rdata: vec![172, 217, 25, 238],
         };
-        cache(domain.clone(), QType::A, vec![resource]).unwrap();
+        cache(
+            domain.clone(),
+            QType::A,
+            &Some(vec![resource]),
+            &None,
+            &None,
+        )
+        .unwrap();
 
         let list = resolve(domain, QType::A);
         assert!(list.is_some());

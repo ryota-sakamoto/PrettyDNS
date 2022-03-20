@@ -63,7 +63,23 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     }
 
     let q = req.query.unwrap();
-    if let Some(answer) = cache::resolve(q.qname.to_string(), q.qtype) {
+    if let Some(cache_data) = cache::resolve(q.qname.to_string(), q.qtype) {
+        let an_count = cache_data
+            .data
+            .answer
+            .as_ref()
+            .map_or_else(|| 0, |v: &Vec<_>| v.len()) as u16;
+        let ns_count = cache_data
+            .data
+            .authority
+            .as_ref()
+            .map_or_else(|| 0, |v: &Vec<_>| v.len()) as u16;
+        let ar_count = cache_data
+            .data
+            .additional
+            .as_ref()
+            .map_or_else(|| 0, |v: &Vec<_>| v.len()) as u16;
+
         return Ok(Message {
             header: Header {
                 id: req.header.id,
@@ -78,14 +94,14 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
                 cd: 0,
                 rcode: 0,
                 qd_count: 1,
-                an_count: answer.data.len() as u16,
-                ns_count: 0,
-                ar_count: 0,
+                an_count: an_count,
+                ns_count: ns_count,
+                ar_count: ar_count,
             },
             query: Some(q),
-            answer: Some(answer.data),
-            authority: None,
-            additional: None,
+            answer: cache_data.data.answer,
+            authority: cache_data.data.authority,
+            additional: cache_data.data.additional,
         });
     }
 
@@ -146,9 +162,14 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     result.header.id = req.header.id;
 
     debug!("result: {:?}", result);
-    if let Some(answer) = result.answer.as_ref() {
-        cache::cache(domain, q.qtype, answer.clone()).unwrap();
-    }
+    cache::cache(
+        domain,
+        q.qtype,
+        &result.answer,
+        &result.authority,
+        &result.additional,
+    )
+    .unwrap();
 
     Ok(result)
 }
