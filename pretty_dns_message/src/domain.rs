@@ -1,3 +1,8 @@
+use nom::{
+    bytes::complete::take, combinator::flat_map, combinator::peek, multi::fold_many0,
+    number::complete::be_u8, IResult,
+};
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Domain(Vec<u8>);
 
@@ -17,6 +22,54 @@ impl ToString for Domain {
 }
 
 impl Domain {
+    pub fn read(data: &[u8]) -> IResult<&[u8], Domain> {
+        let (data, m1) = peek(be_u8)(data)?;
+
+        // check message compaction
+        if (m1 >> 6) == 3 {
+            let (data, m1) = be_u8(data)?;
+            let (data, m2) = be_u8(data)?;
+
+            return Ok((data, Domain::from(vec![m1, m2])));
+        } else {
+            let (data, domain) = Domain::read_domain(data)?;
+            return Ok((data, Domain::from(domain)));
+        }
+    }
+
+    fn read_domain(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
+        let (data, qname) = fold_many0(
+            Domain::_read_domain,
+            Vec::new,
+            |mut v: Vec<_>, item: &[u8]| {
+                let mut item = item.to_vec();
+                item.push(46);
+                v.push(item);
+                v
+            },
+        )(data)?;
+
+        // read 0 of the end of the qname
+        let (data, z) = be_u8(data)?;
+        if z != 0 {
+            return Err(nom::Err::Incomplete(nom::Needed::new(0)));
+        }
+
+        return Ok((data, qname.into_iter().flatten().collect()));
+    }
+
+    fn _read_domain(data: &[u8]) -> IResult<&[u8], &[u8]> {
+        let (data, a) = flat_map(be_u8, take)(data)?;
+        if a.len() == 0 {
+            return Err(nom::Err::Error(nom::error::make_error(
+                data,
+                nom::error::ErrorKind::Eof,
+            )));
+        }
+
+        return Ok((data, a));
+    }
+
     pub fn split(&self, c: char) -> Vec<Vec<u8>> {
         let c = c as u8;
         let mut result = vec![];

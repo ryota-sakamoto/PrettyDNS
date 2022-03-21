@@ -1,11 +1,5 @@
 use crate::{domain::Domain, qtype::QType};
-use nom::{
-    bytes::complete::take,
-    combinator::{flat_map, map},
-    multi::fold_many0,
-    number::complete::{be_u16, be_u8},
-    IResult,
-};
+use nom::{combinator::map, number::complete::be_u16, IResult};
 use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq)]
@@ -17,51 +11,18 @@ pub struct Query {
 
 impl Query {
     pub fn read(data: &[u8]) -> IResult<&[u8], Query> {
-        let (data, qname) = Query::read_domain(data)?;
+        let (data, qname) = Domain::read(data)?;
         let (data, qtype) = map(be_u16, |q| q.into())(data)?;
         let (data, qclass) = be_u16(data)?;
 
         return Ok((
             data,
             Query {
-                qname: Domain::from(qname),
+                qname: qname,
                 qtype: qtype,
                 qclass: qclass,
             },
         ));
-    }
-
-    pub fn read_domain(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
-        let (data, qname) = fold_many0(
-            Query::_read_domain,
-            Vec::new,
-            |mut v: Vec<_>, item: &[u8]| {
-                let mut item = item.to_vec();
-                item.push(46);
-                v.push(item);
-                v
-            },
-        )(data)?;
-
-        // read 0 of the end of the qname
-        let (data, z) = be_u8(data)?;
-        if z != 0 {
-            return Err(nom::Err::Incomplete(nom::Needed::new(0)));
-        }
-
-        return Ok((data, qname.into_iter().flatten().collect()));
-    }
-
-    fn _read_domain(data: &[u8]) -> IResult<&[u8], &[u8]> {
-        let (data, a) = flat_map(be_u8, take)(data)?;
-        if a.len() == 0 {
-            return Err(nom::Err::Error(nom::error::make_error(
-                data,
-                nom::error::ErrorKind::Eof,
-            )));
-        }
-
-        return Ok((data, a));
     }
 
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {

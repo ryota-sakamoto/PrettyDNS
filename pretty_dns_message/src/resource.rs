@@ -1,7 +1,6 @@
 use crate::{domain::Domain, qtype::QType};
 use nom::{
     combinator::map,
-    combinator::peek,
     multi::count,
     number::complete::{be_u16, be_u32, be_u8},
     IResult,
@@ -20,7 +19,7 @@ pub struct Resource {
 
 impl Resource {
     pub fn read(data: &[u8]) -> IResult<&[u8], Resource> {
-        let (data, name) = Resource::__read(data)?;
+        let (data, name) = Domain::read(data)?;
         let (data, _type) = map(be_u16, |q| q.into())(data)?;
         let (data, class) = be_u16(data)?;
         let (data, ttl) = be_u32(data)?;
@@ -38,20 +37,6 @@ impl Resource {
                 rdata: rdata,
             },
         ));
-    }
-
-    fn __read(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
-        let (data, m1) = peek(be_u8)(data)?;
-
-        // check message compaction
-        if (m1 >> 6) == 3 {
-            let (data, m1) = be_u8(data)?;
-            let (data, m2) = be_u8(data)?;
-
-            return Ok((data, vec![m1, m2]));
-        } else {
-            return crate::query::Query::read_domain(data);
-        }
     }
 
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
