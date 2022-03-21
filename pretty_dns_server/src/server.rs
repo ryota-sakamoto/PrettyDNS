@@ -125,9 +125,9 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
             qclass: 1,
         };
 
-        debug!("resolve: {:?}, ns: {:?}", q, ns);
+        debug!("ns resolve: {:?}, ns: {:?}", q, ns);
         let _result = client::resolve(q, ns).await?;
-        debug!("answer: {:?}", _result.answer);
+        debug!("ns answer: {:?}", _result.answer);
         if let Some(additional) = _result.additional {
             for a in additional {
                 // debug!("additional: {:?}", a);
@@ -157,11 +157,11 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
         qtype: q.qtype,
         qclass: 1,
     };
-    debug!("resolve: {:?}, ns: {:?}", query, ns);
+    debug!("query resolve: {:?}, ns: {:?}", query, ns);
     let mut result = client::resolve(query, ns).await?;
     result.header.id = req.header.id;
 
-    debug!("result: {:?}", result);
+    debug!("query result: {:?}", result);
     cache::cache(
         domain,
         q.qtype,

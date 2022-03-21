@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
 use pretty_dns_message::{qtype::QType, resource::Resource};
 use std::{collections::HashMap, sync::Mutex};
-use tracing::info;
+use tracing::debug;
 
 static CACHE: Lazy<Mutex<HashMap<(String, QType), Record>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
@@ -21,7 +21,7 @@ pub struct CacheData {
 }
 
 pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
-    info!("resolve: {:?}", domain);
+    debug!("cache resolve: {:?}", domain);
     let mut c = CACHE.lock().unwrap();
     let mut r = c.get(&(domain.clone(), qtype))?.clone();
 
@@ -78,7 +78,7 @@ pub fn cache(
     authority: &Option<Vec<Resource>>,
     additional: &Option<Vec<Resource>>,
 ) -> Result<(), ()> {
-    info!("cache: {:?}", domain);
+    debug!("cache: {:?}", domain);
 
     let mut c = CACHE.lock().unwrap();
     c.insert(
@@ -98,7 +98,7 @@ pub fn cache(
 #[cfg(test)]
 mod tests {
     use super::{cache, resolve};
-    use pretty_dns_message::{qtype::QType, resource::Resource};
+    use pretty_dns_message::{domain::Domain, qtype::QType, resource::Resource};
 
     #[test]
     fn test_resolve_none() {
@@ -111,7 +111,7 @@ mod tests {
     fn test_resolve_some() {
         let domain = "test.example.com.".to_owned();
         let resource = Resource {
-            name: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
+            name: Domain::from(vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]),
             _type: QType::A,
             class: 1,
             ttl: 299,

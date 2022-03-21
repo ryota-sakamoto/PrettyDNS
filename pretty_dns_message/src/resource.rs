@@ -1,4 +1,4 @@
-use crate::qtype::QType;
+use crate::{domain::Domain, qtype::QType};
 use nom::{
     combinator::map,
     combinator::peek,
@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Resource {
-    pub name: Vec<u8>,
+    pub name: Domain,
     pub _type: QType,
     pub class: u16,
     pub ttl: u32,
@@ -30,7 +30,7 @@ impl Resource {
         return Ok((
             data,
             Resource {
-                name: name,
+                name: Domain::from(name),
                 _type: _type,
                 class: class,
                 ttl: ttl,
@@ -58,12 +58,12 @@ impl Resource {
         let mut v = vec![];
 
         let mut name = vec![];
-        if self.name.len() == 2 {
-            name.extend_from_slice(&self.name);
+        if self.name.is_compression() {
+            name.extend_from_slice(&self.name.to_vec());
         } else {
-            for v in self.name.split(|v| *v == 46) {
+            for v in self.name.split('.') {
                 name.push(v.len() as u8);
-                name.extend_from_slice(v);
+                name.extend_from_slice(&v);
             }
         }
 
@@ -83,6 +83,7 @@ impl Resource {
 
 #[cfg(test)]
 mod tests {
+    use super::Domain;
     use super::QType;
     use super::Resource;
 
@@ -94,7 +95,7 @@ mod tests {
         assert_eq!(
             q,
             Resource {
-                name: vec![192, 12],
+                name: Domain::from(vec![192, 12]),
                 _type: QType::A,
                 class: 1,
                 ttl: 299,
@@ -107,7 +108,7 @@ mod tests {
     #[tokio::test]
     async fn write_resource() {
         let h = Resource {
-            name: vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46],
+            name: Domain::from(vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]),
             _type: QType::A,
             class: 1,
             ttl: 299,

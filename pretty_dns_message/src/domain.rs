@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Domain(Vec<u8>);
 
 impl<T> From<T> for Domain
@@ -38,12 +38,21 @@ impl Domain {
 
     pub fn to_vec(&self) -> Vec<u8> {
         let mut qname = vec![];
+        if self.is_compression() {
+            qname.extend_from_slice(self.0.as_ref());
+            return qname;
+        }
+
         for v in self.split('.') {
             qname.push(v.len() as u8);
             qname.extend_from_slice(v.as_ref());
         }
 
         return qname;
+    }
+
+    pub fn is_compression(&self) -> bool {
+        return (self.0[0] >> 6) == 3;
     }
 }
 
@@ -73,5 +82,12 @@ mod tests {
             result,
             [6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0]
         );
+    }
+
+    #[tokio::test]
+    async fn test_compression_to_vec() {
+        let domain = Domain(vec![192, 12]);
+        let result = domain.to_vec();
+        assert_eq!(result, [192, 12]);
     }
 }
