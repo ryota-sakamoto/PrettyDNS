@@ -114,6 +114,22 @@ mod tests {
     use super::Domain;
 
     #[tokio::test]
+    async fn test_read() {
+        let (_, domain) =
+            Domain::read(&vec![6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0]).unwrap();
+        assert_eq!(
+            domain,
+            Domain(vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]),
+        );
+    }
+
+    #[tokio::test]
+    async fn test_compression_read() {
+        let (_, domain) = Domain::read(&vec![192, 12]).unwrap();
+        assert_eq!(domain, Domain(vec![192, 12]));
+    }
+
+    #[tokio::test]
     async fn test_split() {
         let domain = Domain(b"google.com.".to_vec());
         let result = domain.split('.');
