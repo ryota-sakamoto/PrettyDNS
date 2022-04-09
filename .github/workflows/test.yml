@@ -19,6 +19,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: install toolchain
         uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt
       - name: cargo fmt
         uses: actions-rs/cargo@v1
         with:
