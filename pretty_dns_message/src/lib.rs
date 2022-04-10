@@ -1,3 +1,4 @@
+pub mod compression;
 pub mod domain;
 pub mod header;
 pub mod message;

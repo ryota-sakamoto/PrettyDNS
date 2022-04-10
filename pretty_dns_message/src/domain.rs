@@ -37,7 +37,7 @@ impl Domain {
         }
     }
 
-    fn read_domain(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    pub fn read_domain(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
         let (data, qname) = fold_many0(
             Domain::_read_domain,
             Vec::new,
