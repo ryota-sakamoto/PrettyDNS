@@ -32,30 +32,36 @@ impl Domain {
 
             return Ok((data, Domain::from(vec![m1, m2])));
         } else {
-            let (data, domain) = Domain::read_domain(data)?;
+            let (data, domain) = Domain::read_domain(true)(data)?;
             return Ok((data, Domain::from(domain)));
         }
     }
 
-    pub fn read_domain(data: &[u8]) -> IResult<&[u8], Vec<u8>> {
-        let (data, qname) = fold_many0(
-            Domain::_read_domain,
-            Vec::new,
-            |mut v: Vec<_>, item: &[u8]| {
-                let mut item = item.to_vec();
-                item.push(46);
-                v.push(item);
-                v
-            },
-        )(data)?;
+    pub fn read_domain(is_check_last_zero: bool) -> impl FnMut(&[u8]) -> IResult<&[u8], Vec<u8>> {
+        move |data: &[u8]| {
+            let (data, qname) = fold_many0(
+                Domain::_read_domain,
+                Vec::new,
+                |mut v: Vec<_>, item: &[u8]| {
+                    let mut item = item.to_vec();
+                    item.push(46);
+                    v.push(item);
+                    v
+                },
+            )(data)?;
 
-        // read 0 of the end of the qname
-        let (data, z) = be_u8(data)?;
-        if z != 0 {
-            return Err(nom::Err::Incomplete(nom::Needed::new(0)));
+            if is_check_last_zero {
+                // read 0 of the end of the qname
+                let (data, z) = be_u8(data)?;
+                if z != 0 {
+                    return Err(nom::Err::Incomplete(nom::Needed::new(0)));
+                }
+
+                return Ok((data, qname.into_iter().flatten().collect()));
+            }
+
+            return Ok((data, qname.into_iter().flatten().collect()));
         }
-
-        return Ok((data, qname.into_iter().flatten().collect()));
     }
 
     fn _read_domain(data: &[u8]) -> IResult<&[u8], &[u8]> {

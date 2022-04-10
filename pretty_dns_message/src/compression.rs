@@ -1,68 +1,69 @@
 use crate::domain::Domain;
-use nom::IResult;
+use nom::{bytes::complete::take, combinator::peek, number::complete::be_u8, IResult};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Compression(Vec<u8>);
+pub struct CompressionData(Vec<DataType>);
 
-impl Compression {
-    pub fn read<'a>(data: &'a [u8], raw: &'a [u8]) -> IResult<&'a [u8], Compression> {
+#[derive(Debug, PartialEq, Clone)]
+enum DataType {
+    Compression { position: u8 },
+    Raw(Vec<u8>),
+}
+
+impl CompressionData {
+    pub fn read<'a>(raw: &'a [u8]) -> IResult<&'a [u8], CompressionData> {
         let mut result = vec![];
 
         let mut index = 0;
-        while index < data.len() {
-            if (data[index] >> 6) == 3 {
-                let position = data[index + 1] as usize;
-                let (_, domain) = Domain::read_domain(&raw[position..])?;
-                result.extend(domain);
+        let mut data = raw.clone();
+        while index < raw.len() {
+            let (_, flag) = peek(be_u8)(data)?;
+            if (flag >> 6) == 3 {
+                let (_data, _) = be_u8(data)?;
+                let (_data, m2) = be_u8(_data)?;
+                data = _data;
+
+                result.push(DataType::Compression { position: m2 });
 
                 index += 2;
             } else {
-                let end = data[index] as usize + 1;
-                let mut v: Vec<_> = data[index..end].into();
-                v.push(0);
+                let (_, end) = be_u8(data)?;
+                let (remain, _data) = take(end as usize + 1)(&data[index..])?;
+                let (_, domain) = Domain::read_domain(false)(_data)?;
 
-                let (_, domain) = Domain::read_domain(&v).unwrap();
-                result.extend(domain);
+                data = remain;
+                result.push(DataType::Raw(domain));
 
-                index += end;
+                index += end as usize + 1;
             }
         }
 
-        Ok((data, Compression(result)))
+        Ok((data, CompressionData(result)))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Compression;
+    use super::{CompressionData, DataType};
 
     #[tokio::test]
     async fn test_extract_first() {
-        let raw = vec![
-            245, 212, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
-            109, 0, 0, 1, 0, 1,
-        ];
-
-        let (_, result) = Compression::read(&vec![192, 12], &raw).unwrap();
+        let (_, result) = CompressionData::read(&vec![192, 12]).unwrap();
         assert_eq!(
             result,
-            Compression(vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]),
+            CompressionData(vec![DataType::Compression { position: 12 }])
         );
     }
 
     #[tokio::test]
     async fn test_extract() {
-        let raw = vec![
-            245, 212, 1, 32, 0, 1, 0, 0, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
-            109, 0, 0, 1, 0, 1,
-        ];
-
-        let (_, result) = Compression::read(&vec![1, 98, 192, 12], &raw).unwrap();
+        let (_, result) = CompressionData::read(&vec![1, 98, 192, 12]).unwrap();
         assert_eq!(
             result,
-            Compression(vec![
-                98, 46, 103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46
-            ]),
+            CompressionData(vec![
+                DataType::Raw(vec![98, 46]),
+                DataType::Compression { position: 12 }
+            ])
         );
     }
 }
