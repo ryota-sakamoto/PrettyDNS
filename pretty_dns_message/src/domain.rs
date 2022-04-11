@@ -1,6 +1,10 @@
 use nom::{
-    bytes::complete::take, combinator::flat_map, combinator::peek, multi::fold_many0,
-    number::complete::be_u8, IResult,
+    bytes::complete::take,
+    combinator::peek,
+    combinator::{cond, flat_map},
+    multi::fold_many0,
+    number::complete::be_u8,
+    IResult,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -50,14 +54,12 @@ impl Domain {
                 },
             )(data)?;
 
-            if is_check_last_zero {
-                // read 0 of the end of the qname
-                let (data, z) = be_u8(data)?;
+            let (data, z) = cond(is_check_last_zero, be_u8)(data)?;
+            if let Some(z) = z {
+                // read 0 which is the end of the qname
                 if z != 0 {
                     return Err(nom::Err::Incomplete(nom::Needed::new(0)));
                 }
-
-                return Ok((data, qname.into_iter().flatten().collect()));
             }
 
             return Ok((data, qname.into_iter().flatten().collect()));
