@@ -43,14 +43,7 @@ impl Resource {
         let mut v = vec![];
 
         let mut name = vec![];
-        if self.name.is_compression() {
-            name.extend_from_slice(&self.name.to_vec());
-        } else {
-            for v in self.name.split('.') {
-                name.push(v.len() as u8);
-                name.extend_from_slice(&v);
-            }
-        }
+        name.extend_from_slice(&self.name.to_vec());
 
         v.write_all(&name).await?;
 
