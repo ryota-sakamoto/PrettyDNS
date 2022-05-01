@@ -64,21 +64,9 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
 
     let q = req.query.unwrap();
     if let Some(cache_data) = cache::resolve(q.qname.to_string(), q.qtype) {
-        let an_count = cache_data
-            .data
-            .answer
-            .as_ref()
-            .map_or_else(|| 0, |v: &Vec<_>| v.len()) as u16;
-        let ns_count = cache_data
-            .data
-            .authority
-            .as_ref()
-            .map_or_else(|| 0, |v: &Vec<_>| v.len()) as u16;
-        let ar_count = cache_data
-            .data
-            .additional
-            .as_ref()
-            .map_or_else(|| 0, |v: &Vec<_>| v.len()) as u16;
+        let an_count = cache_data.data.answer.len() as u16;
+        let ns_count = cache_data.data.authority.len() as u16;
+        let ar_count = cache_data.data.additional.len() as u16;
 
         return Ok(Message {
             header: Header {
@@ -128,25 +116,23 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
         debug!("ns resolve: {:?}, ns: {:?}", q, ns);
         let _result = client::resolve(q, ns).await?;
         debug!("ns answer: {:?}", _result.answer);
-        if let Some(additional) = _result.additional {
-            for a in additional {
-                // debug!("additional: {:?}", a);
-                if a._type != QType::A {
-                    continue;
-                }
-
-                if a.rdata.len() != 4 {
-                    warn!("rdata is not wrong length: {:?}", a.rdata);
-                    continue;
-                }
-
-                ns = SocketAddr::new(
-                    IpAddr::V4(Ipv4Addr::new(
-                        a.rdata[0], a.rdata[1], a.rdata[2], a.rdata[3],
-                    )),
-                    53,
-                );
+        for a in _result.additional {
+            // debug!("additional: {:?}", a);
+            if a._type != QType::A {
+                continue;
             }
+
+            if a.rdata.len() != 4 {
+                warn!("rdata is not wrong length: {:?}", a.rdata);
+                continue;
+            }
+
+            ns = SocketAddr::new(
+                IpAddr::V4(Ipv4Addr::new(
+                    a.rdata[0], a.rdata[1], a.rdata[2], a.rdata[3],
+                )),
+                53,
+            );
         }
     }
 

@@ -5,27 +5,18 @@ use nom::{combinator::cond, multi::count, IResult};
 pub struct Message {
     pub header: header::Header,
     pub query: Option<query::Query>,
-    pub answer: Option<Vec<resource::Resource>>,
-    pub authority: Option<Vec<resource::Resource>>,
-    pub additional: Option<Vec<resource::Resource>>,
+    pub answer: Vec<resource::Resource>,
+    pub authority: Vec<resource::Resource>,
+    pub additional: Vec<resource::Resource>,
 }
 
 impl Message {
     pub fn from_bytes(data: &[u8]) -> IResult<&[u8], Message> {
         let (data, h) = header::Header::read(data)?;
         let (data, q) = cond(h.qd_count > 0, query::Query::read)(data)?;
-        let (data, a) = cond(
-            h.an_count > 0,
-            count(resource::Resource::read, h.an_count.into()),
-        )(data)?;
-        let (data, au) = cond(
-            h.ns_count > 0,
-            count(resource::Resource::read, h.ns_count.into()),
-        )(data)?;
-        let (_data, ad) = cond(
-            h.ar_count > 0,
-            count(resource::Resource::read, h.ar_count.into()),
-        )(data)?;
+        let (data, a) = count(resource::Resource::read, h.an_count.into())(data)?;
+        let (data, au) = count(resource::Resource::read, h.ns_count.into())(data)?;
+        let (_, ad) = count(resource::Resource::read, h.ar_count.into())(data)?;
 
         return Ok((
             data,
@@ -50,25 +41,19 @@ impl Message {
             result.extend_from_slice(&q);
         }
 
-        if let Some(ref v) = self.answer {
-            for v in v {
-                let a = v.to_vec().await?;
-                result.extend_from_slice(&a);
-            }
+        for v in &self.answer {
+            let a = v.to_vec().await?;
+            result.extend_from_slice(&a);
         }
 
-        if let Some(ref v) = self.authority {
-            for v in v {
-                let a = v.to_vec().await?;
-                result.extend_from_slice(&a);
-            }
+        for v in &self.authority {
+            let a = v.to_vec().await?;
+            result.extend_from_slice(&a);
         }
 
-        if let Some(ref v) = self.additional {
-            for v in v {
-                let a = v.to_vec().await?;
-                result.extend_from_slice(&a);
-            }
+        for v in &self.additional {
+            let a = v.to_vec().await?;
+            result.extend_from_slice(&a);
         }
 
         return Ok(result);
@@ -114,9 +99,9 @@ mod tests {
                     qclass: 1,
                     qtype: QType::A,
                 }),
-                answer: None,
-                authority: None,
-                additional: None,
+                answer: vec![],
+                authority: vec![],
+                additional: vec![],
             }
         );
     }

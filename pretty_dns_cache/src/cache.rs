@@ -15,9 +15,9 @@ pub struct Record {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CacheData {
-    pub answer: Option<Vec<Resource>>,
-    pub authority: Option<Vec<Resource>>,
-    pub additional: Option<Vec<Resource>>,
+    pub answer: Vec<Resource>,
+    pub authority: Vec<Resource>,
+    pub additional: Vec<Resource>,
 }
 
 pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
@@ -40,33 +40,23 @@ impl Record {
         let now = Utc::now();
         let diff = (now - self.cached_at).num_seconds() as u32;
 
-        if let Some(answer) = &self.data.answer {
-            return answer.iter().any(|v| v.ttl <= diff);
-        } else {
-            return false;
-        }
+        return self.data.answer.iter().any(|v| v.ttl <= diff);
     }
 
     fn update_ttl(&mut self) {
         let now = Utc::now();
         let diff = (now - self.cached_at).num_seconds() as u32;
 
-        if let Some(v) = self.data.answer.as_mut() {
-            for i in 0..v.len() {
-                v[i].ttl = v[i].ttl - diff;
-            }
+        for i in 0..self.data.answer.len() {
+            self.data.answer[i].ttl = self.data.answer[i].ttl - diff;
         }
 
-        if let Some(v) = self.data.authority.as_mut() {
-            for i in 0..v.len() {
-                v[i].ttl = v[i].ttl - diff;
-            }
+        for i in 0..self.data.authority.len() {
+            self.data.authority[i].ttl = self.data.authority[i].ttl - diff;
         }
 
-        if let Some(v) = self.data.additional.as_mut() {
-            for i in 0..v.len() {
-                v[i].ttl = v[i].ttl - diff;
-            }
+        for i in 0..self.data.additional.len() {
+            self.data.additional[i].ttl = self.data.additional[i].ttl - diff;
         }
     }
 }
@@ -74,9 +64,9 @@ impl Record {
 pub fn cache(
     domain: String,
     qtype: QType,
-    answer: &Option<Vec<Resource>>,
-    authority: &Option<Vec<Resource>>,
-    additional: &Option<Vec<Resource>>,
+    answer: &Vec<Resource>,
+    authority: &Vec<Resource>,
+    additional: &Vec<Resource>,
 ) -> Result<(), ()> {
     debug!("cache: {:?}", domain);
 
@@ -118,14 +108,7 @@ mod tests {
             rdlength: 4,
             rdata: vec![172, 217, 25, 238],
         };
-        cache(
-            domain.clone(),
-            QType::A,
-            &Some(vec![resource]),
-            &None,
-            &None,
-        )
-        .unwrap();
+        cache(domain.clone(), QType::A, &vec![resource], &vec![], &vec![]).unwrap();
 
         let list = resolve(domain, QType::A);
         assert!(list.is_some());

@@ -27,9 +27,9 @@ pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Messag
             ar_count: 0,
         },
         query: Some(query),
-        answer: None,
-        authority: None,
-        additional: None,
+        answer: vec![],
+        authority: vec![],
+        additional: vec![],
     };
 
     sock.send_to(&message.to_vec().await?, ns).await?;
