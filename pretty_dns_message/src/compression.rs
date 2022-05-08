@@ -42,13 +42,41 @@ impl CompressionData {
     }
 }
 
+impl Into<Vec<u8>> for CompressionData {
+    fn into(self) -> Vec<u8> {
+        self.0
+            .into_iter()
+            .map::<Vec<u8>, _>(|v| v.into())
+            .flatten()
+            .collect()
+    }
+}
+
+impl Into<Vec<u8>> for DataType {
+    fn into(self) -> Vec<u8> {
+        match self {
+            DataType::Compression { position } => {
+                vec![192, position]
+            }
+            DataType::Raw(v) => {
+                let mut result = vec![(v.len() - 1) as u8];
+                result.extend(&v[..v.len() - 1]);
+
+                result
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{CompressionData, DataType};
 
     #[tokio::test]
     async fn test_extract_first() {
-        let (_, result) = CompressionData::read(&vec![192, 12]).unwrap();
+        let data = vec![192, 12];
+        let (data, result) = CompressionData::read(&data).unwrap();
+        assert_eq!(data, vec![]);
         assert_eq!(
             result,
             CompressionData(vec![DataType::Compression { position: 12 }])
@@ -57,7 +85,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract() {
-        let (_, result) = CompressionData::read(&vec![1, 98, 192, 12]).unwrap();
+        let data = vec![1, 98, 192, 12];
+        let (data, result) = CompressionData::read(&data).unwrap();
+        assert_eq!(data, vec![]);
         assert_eq!(
             result,
             CompressionData(vec![
@@ -65,5 +95,15 @@ mod tests {
                 DataType::Compression { position: 12 }
             ])
         );
+    }
+
+    #[tokio::test]
+    async fn test_into() {
+        let data = CompressionData(vec![
+            DataType::Raw(vec![98, 46]),
+            DataType::Compression { position: 12 },
+        ]);
+        let result: Vec<u8> = data.into();
+        assert_eq!(result, vec![1, 98, 192, 12]);
     }
 }
