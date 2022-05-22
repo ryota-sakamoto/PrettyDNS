@@ -1,4 +1,4 @@
-use crate::{domain::Domain, qtype::QType};
+use crate::{compression::CompressionData, qtype::QType};
 use nom::{
     combinator::map,
     multi::count,
@@ -9,7 +9,7 @@ use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Resource {
-    pub name: Domain,
+    pub name: CompressionData,
     pub _type: QType,
     pub class: u16,
     pub ttl: u32,
@@ -19,7 +19,7 @@ pub struct Resource {
 
 impl Resource {
     pub fn read(data: &[u8]) -> IResult<&[u8], Resource> {
-        let (data, name) = Domain::read(data)?;
+        let (data, name) = CompressionData::read(data)?;
         let (data, _type) = map(be_u16, |q| q.into())(data)?;
         let (data, class) = be_u16(data)?;
         let (data, ttl) = be_u32(data)?;
@@ -29,7 +29,7 @@ impl Resource {
         return Ok((
             data,
             Resource {
-                name: Domain::from(name),
+                name: name,
                 _type: _type,
                 class: class,
                 ttl: ttl,
@@ -42,8 +42,7 @@ impl Resource {
     pub async fn to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut v = vec![];
 
-        let mut name = vec![];
-        name.extend_from_slice(&self.name.to_vec());
+        let name: Vec<u8> = self.name.clone().into();
 
         v.write_all(&name).await?;
 
@@ -61,9 +60,9 @@ impl Resource {
 
 #[cfg(test)]
 mod tests {
-    use super::Domain;
     use super::QType;
     use super::Resource;
+    use crate::compression::{CompressionData, DataType};
 
     #[tokio::test]
     async fn parse_resource() {
@@ -73,7 +72,7 @@ mod tests {
         assert_eq!(
             q,
             Resource {
-                name: Domain::from(vec![192, 12]),
+                name: CompressionData::new(vec![DataType::Compression { position: 12 }]),
                 _type: QType::A,
                 class: 1,
                 ttl: 299,
@@ -86,7 +85,10 @@ mod tests {
     #[tokio::test]
     async fn write_resource() {
         let h = Resource {
-            name: Domain::from(vec![103, 111, 111, 103, 108, 101, 46, 99, 111, 109, 46]),
+            name: CompressionData::new(vec![
+                DataType::Raw(vec![103, 111, 111, 103, 108, 101]),
+                DataType::Raw(vec![99, 111, 109]),
+            ]),
             _type: QType::A,
             class: 1,
             ttl: 299,

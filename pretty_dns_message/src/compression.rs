@@ -26,7 +26,7 @@ impl CompressionData {
 
         let mut index = 0;
         let mut data = raw.clone();
-        while index < raw.len() {
+        loop {
             let (_, flag) = peek(be_u8)(data)?;
             if (flag >> 6) == 3 {
                 let (_data, _) = be_u8(data)?;
@@ -34,9 +34,8 @@ impl CompressionData {
                 data = _data;
 
                 result.push(DataType::Compression { position: m2 });
-
-                index += 2;
-            } else {
+                break;
+            } else if flag != 0 {
                 let (_, end) = be_u8(data)?;
                 let (remain, _data) = take(end as usize + 1)(&data[index..])?;
                 let (_, domain) = Self::read_domain(false)(_data)?;
@@ -45,6 +44,8 @@ impl CompressionData {
                 result.push(DataType::Raw(domain));
 
                 index += end as usize + 1;
+            } else {
+                break;
             }
         }
 
@@ -132,9 +133,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_compression() {
-        let data = vec![192, 12];
+        let data = vec![192, 12, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238];
         let (data, result) = CompressionData::read(&data).unwrap();
-        assert_eq!(data, vec![]);
+        assert_eq!(data, vec![0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238]);
         assert_eq!(
             result,
             CompressionData(vec![DataType::Compression { position: 12 }])

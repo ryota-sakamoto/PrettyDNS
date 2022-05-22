@@ -4,7 +4,7 @@ use tokio::{
     net::{ToSocketAddrs, UdpSocket},
     time::{self, Duration},
 };
-use tracing::info;
+use tracing::{debug, info};
 
 pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Message> {
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
@@ -38,7 +38,8 @@ pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Messag
         let mut buf = [0; 1024];
 
         match sock.recv_from(&mut buf).await {
-            Ok(_v) => {
+            Ok((v, _)) => {
+                debug!("query result raw: {:?}", &buf[..v]);
                 let (_, res) = Message::from_bytes(&buf).unwrap();
                 return Ok(res);
             }

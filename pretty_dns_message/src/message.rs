@@ -16,7 +16,7 @@ impl Message {
         let (data, q) = cond(h.qd_count > 0, query::Query::read)(data)?;
         let (data, a) = count(resource::Resource::read, h.an_count.into())(data)?;
         let (data, au) = count(resource::Resource::read, h.ns_count.into())(data)?;
-        let (_, ad) = count(resource::Resource::read, h.ar_count.into())(data)?;
+        let (data, ad) = count(resource::Resource::read, h.ar_count.into())(data)?;
 
         return Ok((
             data,
@@ -63,8 +63,10 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use super::Message;
+    use crate::compression::{CompressionData, DataType};
     use crate::domain::Domain;
     use crate::qtype::QType;
+    use crate::resource::Resource;
 
     #[tokio::test]
     async fn parse_message() {
@@ -102,6 +104,53 @@ mod tests {
                 answer: vec![],
                 authority: vec![],
                 additional: vec![],
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn parse_message_edns() {
+        let data = vec![
+            226, 29, 1, 32, 0, 1, 0, 0, 0, 0, 0, 1, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111,
+            109, 0, 0, 1, 0, 1, 0, 0, 41, 16, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let (_, result) = Message::from_bytes(&data).unwrap();
+
+        assert_eq!(
+            result,
+            super::Message {
+                header: super::header::Header {
+                    id: 57885,
+                    qr: 0,
+                    opcode: 0,
+                    aa: 0,
+                    tc: 0,
+                    rd: 1,
+                    ra: 0,
+                    z: 0,
+                    ad: 1,
+                    cd: 0,
+                    rcode: 0,
+                    qd_count: 1,
+                    an_count: 0,
+                    ns_count: 0,
+                    ar_count: 1,
+                },
+                query: Some(super::query::Query {
+                    qname: Domain::from(b"google.com.".to_vec()),
+                    qclass: 1,
+                    qtype: QType::A,
+                }),
+                answer: vec![],
+                authority: vec![],
+                additional: vec![Resource {
+                    name: CompressionData::new(vec![]),
+                    _type: QType::Unknown(0),
+                    class: 10512,
+                    ttl: 0,
+                    rdlength: 0,
+                    rdata: vec![]
+                }],
             }
         );
     }
