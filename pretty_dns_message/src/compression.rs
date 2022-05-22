@@ -1,5 +1,11 @@
-use crate::domain::Domain;
-use nom::{bytes::complete::take, combinator::peek, number::complete::be_u8, IResult};
+use nom::{
+    bytes::complete::take,
+    combinator::peek,
+    combinator::{cond, flat_map},
+    multi::fold_many0,
+    number::complete::be_u8,
+    IResult,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct CompressionData(Vec<DataType>);
@@ -29,7 +35,7 @@ impl CompressionData {
             } else {
                 let (_, end) = be_u8(data)?;
                 let (remain, _data) = take(end as usize + 1)(&data[index..])?;
-                let (_, domain) = Domain::read_domain(false)(_data)?;
+                let (_, domain) = Self::read_domain(false)(_data)?;
 
                 data = remain;
                 result.push(DataType::Raw(domain));
@@ -39,6 +45,42 @@ impl CompressionData {
         }
 
         Ok((data, CompressionData(result)))
+    }
+
+    fn read_domain(is_check_last_zero: bool) -> impl FnMut(&[u8]) -> IResult<&[u8], Vec<u8>> {
+        move |data: &[u8]| {
+            let (data, qname) = fold_many0(
+                Self::_read_domain,
+                Vec::new,
+                |mut v: Vec<_>, item: &[u8]| {
+                    let item = item.to_vec();
+                    v.push(item);
+                    v
+                },
+            )(data)?;
+
+            let (data, z) = cond(is_check_last_zero, be_u8)(data)?;
+            if let Some(z) = z {
+                // read 0 which is the end of the qname
+                if z != 0 {
+                    return Err(nom::Err::Incomplete(nom::Needed::new(0)));
+                }
+            }
+
+            return Ok((data, qname.into_iter().flatten().collect()));
+        }
+    }
+
+    fn _read_domain(data: &[u8]) -> IResult<&[u8], &[u8]> {
+        let (data, a) = flat_map(be_u8, take)(data)?;
+        if a.len() == 0 {
+            return Err(nom::Err::Error(nom::error::make_error(
+                data,
+                nom::error::ErrorKind::Eof,
+            )));
+        }
+
+        return Ok((data, a));
     }
 }
 
@@ -59,8 +101,8 @@ impl Into<Vec<u8>> for DataType {
                 vec![192, position]
             }
             DataType::Raw(v) => {
-                let mut result = vec![(v.len() - 1) as u8];
-                result.extend(&v[..v.len() - 1]);
+                let mut result = vec![v.len() as u8];
+                result.extend(v);
 
                 result
             }
@@ -91,7 +133,7 @@ mod tests {
         assert_eq!(
             result,
             CompressionData(vec![
-                DataType::Raw(vec![98, 46]),
+                DataType::Raw(vec![98]),
                 DataType::Compression { position: 12 }
             ])
         );
@@ -100,7 +142,7 @@ mod tests {
     #[tokio::test]
     async fn test_into() {
         let data = CompressionData(vec![
-            DataType::Raw(vec![98, 46]),
+            DataType::Raw(vec![98]),
             DataType::Compression { position: 12 },
         ]);
         let result: Vec<u8> = data.into();
