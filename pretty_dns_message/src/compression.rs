@@ -90,11 +90,23 @@ impl CompressionData {
 
 impl Into<Vec<u8>> for CompressionData {
     fn into(self) -> Vec<u8> {
-        self.0
+        let mut is_append_zero = false;
+        if let Some(DataType::Raw(_)) = self.0.last() {
+            is_append_zero = true;
+        }
+
+        let mut result: Vec<_> = self
+            .0
             .into_iter()
             .map::<Vec<u8>, _>(|v| v.into())
             .flatten()
-            .collect()
+            .collect();
+
+        if is_append_zero {
+            result.push(0);
+        }
+
+        result
     }
 }
 
@@ -119,7 +131,7 @@ mod tests {
     use super::{CompressionData, DataType};
 
     #[tokio::test]
-    async fn test_extract_first() {
+    async fn test_read_compression() {
         let data = vec![192, 12];
         let (data, result) = CompressionData::read(&data).unwrap();
         assert_eq!(data, vec![]);
@@ -130,7 +142,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_extract() {
+    async fn test_read_compression_mix() {
         let data = vec![1, 98, 192, 12];
         let (data, result) = CompressionData::read(&data).unwrap();
         assert_eq!(data, vec![]);
@@ -151,5 +163,18 @@ mod tests {
         ]);
         let result: Vec<u8> = data.into();
         assert_eq!(result, vec![1, 98, 192, 12]);
+    }
+
+    #[tokio::test]
+    async fn test_into_only_raw() {
+        let data = CompressionData(vec![
+            DataType::Raw(vec![103, 111, 111, 103, 108, 101]),
+            DataType::Raw(vec![99, 111, 109]),
+        ]);
+        let result: Vec<u8> = data.into();
+        assert_eq!(
+            result,
+            vec![6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0]
+        );
     }
 }
