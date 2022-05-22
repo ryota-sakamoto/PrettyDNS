@@ -11,12 +11,16 @@ use nom::{
 pub struct CompressionData(Vec<DataType>);
 
 #[derive(Debug, PartialEq, Clone)]
-enum DataType {
+pub enum DataType {
     Compression { position: u8 },
     Raw(Vec<u8>),
 }
 
 impl CompressionData {
+    pub fn new(inner: Vec<DataType>) -> CompressionData {
+        CompressionData(inner)
+    }
+
     pub fn read<'a>(raw: &'a [u8]) -> IResult<&'a [u8], CompressionData> {
         let mut result = vec![];
 
