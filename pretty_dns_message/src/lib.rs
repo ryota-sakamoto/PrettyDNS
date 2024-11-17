@@ -1,4 +1,4 @@
-pub mod compression;
+pub mod compression_domain;
 pub mod domain;
 pub mod header;
 pub mod message;

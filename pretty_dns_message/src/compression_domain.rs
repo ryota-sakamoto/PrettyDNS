@@ -8,7 +8,7 @@ use nom::{
 };
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct CompressionData(Vec<DataType>);
+pub struct CompressionDomain(Vec<DataType>);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum DataType {
@@ -16,12 +16,12 @@ pub enum DataType {
     Raw(Vec<u8>),
 }
 
-impl CompressionData {
-    pub fn new(inner: Vec<DataType>) -> CompressionData {
-        CompressionData(inner)
+impl CompressionDomain {
+    pub fn new(inner: Vec<DataType>) -> CompressionDomain {
+        CompressionDomain(inner)
     }
 
-    pub fn read<'a>(raw: &'a [u8]) -> IResult<&'a [u8], CompressionData> {
+    pub fn read<'a>(raw: &'a [u8]) -> IResult<&'a [u8], CompressionDomain> {
         let mut result = vec![];
 
         let mut index = 0;
@@ -49,7 +49,7 @@ impl CompressionData {
             }
         }
 
-        Ok((data, CompressionData(result)))
+        Ok((data, CompressionDomain(result)))
     }
 
     fn read_domain(is_check_last_zero: bool) -> impl FnMut(&[u8]) -> IResult<&[u8], Vec<u8>> {
@@ -89,7 +89,7 @@ impl CompressionData {
     }
 }
 
-impl Into<Vec<u8>> for CompressionData {
+impl Into<Vec<u8>> for CompressionDomain {
     fn into(self) -> Vec<u8> {
         let mut is_append_zero = false;
         if let Some(DataType::Raw(_)) = self.0.last() {
@@ -129,27 +129,27 @@ impl Into<Vec<u8>> for DataType {
 
 #[cfg(test)]
 mod tests {
-    use super::{CompressionData, DataType};
+    use super::{CompressionDomain, DataType};
 
     #[tokio::test]
     async fn test_read_compression() {
         let data = vec![192, 12, 0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238];
-        let (data, result) = CompressionData::read(&data).unwrap();
+        let (data, result) = CompressionDomain::read(&data).unwrap();
         assert_eq!(data, vec![0, 1, 0, 1, 0, 0, 1, 43, 0, 4, 172, 217, 25, 238]);
         assert_eq!(
             result,
-            CompressionData(vec![DataType::Compression { position: 12 }])
+            CompressionDomain(vec![DataType::Compression { position: 12 }])
         );
     }
 
     #[tokio::test]
     async fn test_read_compression_mix() {
         let data = vec![1, 98, 192, 12];
-        let (data, result) = CompressionData::read(&data).unwrap();
+        let (data, result) = CompressionDomain::read(&data).unwrap();
         assert_eq!(data, vec![]);
         assert_eq!(
             result,
-            CompressionData(vec![
+            CompressionDomain(vec![
                 DataType::Raw(vec![98]),
                 DataType::Compression { position: 12 }
             ])
@@ -158,7 +158,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_into() {
-        let data = CompressionData(vec![
+        let data = CompressionDomain(vec![
             DataType::Raw(vec![98]),
             DataType::Compression { position: 12 },
         ]);
@@ -168,7 +168,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_into_only_raw() {
-        let data = CompressionData(vec![
+        let data = CompressionDomain(vec![
             DataType::Raw(vec![103, 111, 111, 103, 108, 101]),
             DataType::Raw(vec![99, 111, 109]),
         ]);
