@@ -2,7 +2,11 @@ PrettyDNS
 ===
 
 ```
-$ dig google.com @127.0.0.1 +noedns
+$ cargo run -- --port 10053 --debug
+```
+
+```
+$ dig @127.0.0.1 -p 10053 +noedns google.com
 ```
 
 ## ref
