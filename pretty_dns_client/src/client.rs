@@ -4,7 +4,6 @@ use tokio::{
     net::{ToSocketAddrs, UdpSocket},
     time::{self, Duration},
 };
-use tracing::{debug, info};
 
 pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Message> {
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
@@ -39,7 +38,6 @@ pub async fn resolve<T: ToSocketAddrs>(query: Query, ns: T) -> io::Result<Messag
 
         match sock.recv_from(&mut buf).await {
             Ok((v, _)) => {
-                debug!("query result raw: {:?}", &buf[..v]);
                 let (_, res) = Message::from_bytes(&buf).unwrap();
                 return Ok(res);
             }
@@ -62,8 +60,6 @@ pub async fn forward(req: Message) -> io::Result<Vec<u8>> {
         match sock.recv_from(&mut buf).await {
             Ok(v) => {
                 let (_, res) = Message::from_bytes(&buf).unwrap();
-                info!("raw: {:?}", &buf[..v.0]);
-                info!("res: {:?}", res);
                 return Ok(res.to_vec().await?);
             }
             Err(v) => return Err(v),

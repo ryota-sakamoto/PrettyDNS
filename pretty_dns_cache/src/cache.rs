@@ -21,14 +21,17 @@ pub struct CacheData {
 }
 
 pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
-    debug!("cache resolve: {:?}", domain);
+    debug!("try to resolve cache: {:?} {:?}", domain, qtype);
     let mut c = CACHE.lock().unwrap();
     let mut r = c.get(&(domain.clone(), qtype))?.clone();
 
     if r.expired() {
+        debug!("cache is expired: {:?} {:?}", domain, qtype);
         c.remove(&(domain, qtype));
         return None;
     }
+
+    debug!("found cache: {:?} {:?}", domain, qtype);
 
     r.update_ttl();
 
@@ -68,7 +71,7 @@ pub fn cache(
     authority: &Vec<Resource>,
     additional: &Vec<Resource>,
 ) -> Result<(), ()> {
-    debug!("cache: {:?}", domain);
+    debug!("store cache: {:?} {:?}", domain, qtype);
 
     let mut c = CACHE.lock().unwrap();
     c.insert(

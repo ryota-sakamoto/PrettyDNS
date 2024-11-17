@@ -9,7 +9,7 @@ use std::{
     sync::Arc,
 };
 use tokio::net::UdpSocket;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 #[derive(Debug)]
 pub struct Config {
@@ -18,7 +18,7 @@ pub struct Config {
 }
 
 pub async fn start(c: Config) -> io::Result<()> {
-    debug!("start: {:?}", c);
+    debug!("start server: {:?}", c);
 
     let sock = UdpSocket::bind((c.addr, c.port)).await?;
     let sock = Arc::new(sock);
@@ -46,24 +46,24 @@ pub async fn start(c: Config) -> io::Result<()> {
 }
 
 async fn handler(buf: Vec<u8>) -> io::Result<Message> {
-    debug!("---");
-    debug!("data: {:?}", buf);
+    debug!("receive data: {:?}", buf);
 
     let result = Message::from_bytes(&buf);
     if result.is_err() {
-        error!("error: {:?}", result.unwrap_err());
+        error!("parse messge error: {:?}", result.unwrap_err());
         return Err(std::io::Error::from(std::io::ErrorKind::Other));
     }
 
     let (_, req) = result.unwrap();
-    debug!("req: {:?}", req);
+    debug!("parsed request: {:?}", req);
 
     if req.query.is_none() {
         return Err(std::io::Error::from(std::io::ErrorKind::Other));
     }
 
     let q = req.query.unwrap();
-    if let Some(cache_data) = cache::resolve(q.qname.to_string(), q.qtype) {
+    let query_domain = q.qname.to_string();
+    if let Some(cache_data) = cache::resolve(query_domain.clone(), q.qtype) {
         let an_count = cache_data.data.answer.len() as u16;
         let ns_count = cache_data.data.authority.len() as u16;
         let ar_count = cache_data.data.additional.len() as u16;
@@ -94,16 +94,14 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     }
 
     let mut resolve_list = vec![];
-    let domain_list = get_domain_list(&q.qname.to_string());
+    let domain_list = get_domain_list(&query_domain);
     for v in domain_list {
         resolve_list.push(v.clone());
-
-        let record = cache::resolve(v, QType::NS);
-        debug!("cache: {:?}", record);
+        // let record = cache::resolve(v, QType::NS);
     }
 
     resolve_list.reverse();
-    debug!("resolve_list: {:?}", &resolve_list);
+    debug!("resolve list for ns: {:?}", &resolve_list);
 
     let mut ns: SocketAddr = "202.12.27.33:53".parse().unwrap();
     for r in resolve_list {
@@ -113,11 +111,15 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
             qclass: 1,
         };
 
-        debug!("ns resolve: {:?}, ns: {:?}", q, ns);
+        debug!(
+            "try to resolve ns for {:?} by {:?}",
+            q.qname.to_string(),
+            ns
+        );
         let _result = client::resolve(q, ns).await?;
-        debug!("ns answer: {:?}", _result.answer);
+        debug!("resolve result: {:?}", _result);
+
         for a in _result.additional {
-            // debug!("additional: {:?}", a);
             if a._type != QType::A {
                 continue;
             }
@@ -143,7 +145,11 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
         qtype: q.qtype,
         qclass: 1,
     };
-    debug!("query resolve: {:?}, ns: {:?}", query, ns);
+    debug!(
+        "try to resolve query for {:?} by {:?}",
+        query.qname.to_string(),
+        ns
+    );
     let mut result = client::resolve(query, ns).await?;
     result.header.id = req.header.id;
 
