@@ -27,7 +27,23 @@ impl Resource {
         let (data, class) = be_u16(data)?;
         let (data, ttl) = be_u32(data)?;
         let (data, rdlength) = be_u16(data)?;
-        let (data, rdata) = count(be_u8, rdlength.into())(data)?;
+
+        let (data, rdata) = if _type == QType::NS {
+            CompressionData::from_domain(data)?
+        } else {
+            let (data, rdata) = count(be_u8, rdlength.into())(data)?;
+            (
+                data,
+                CompressionData::new(
+                    if rdlength > 0 {
+                        vec![DataType::Raw(rdata.to_vec())]
+                    } else {
+                        vec![]
+                    },
+                    CompressionType::Data,
+                ),
+            )
+        };
 
         return Ok((
             data,
@@ -37,14 +53,7 @@ impl Resource {
                 class: class,
                 ttl: ttl,
                 rdlength: rdlength,
-                rdata: CompressionData::new(
-                    if rdlength > 0 {
-                        vec![DataType::Raw(rdata.to_vec())]
-                    } else {
-                        vec![]
-                    },
-                    CompressionType::Data,
-                ),
+                rdata: rdata,
             },
         ));
     }

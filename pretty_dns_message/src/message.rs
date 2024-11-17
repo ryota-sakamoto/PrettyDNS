@@ -145,8 +145,8 @@ mod tests {
                 authority: vec![],
                 additional: vec![Resource {
                     name: CompressionData::new(vec![], CompressionType::Domain),
-                    _type: QType::Unknown(0),
-                    class: 10512,
+                    _type: QType::Unknown(41),
+                    class: 4096,
                     ttl: 0,
                     rdlength: 0,
                     rdata: CompressionData::new(vec![], CompressionType::Data),

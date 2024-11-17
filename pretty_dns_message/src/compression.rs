@@ -39,7 +39,6 @@ impl CompressionData {
     fn from<'a>(raw: &'a [u8]) -> IResult<&'a [u8], Vec<DataType>> {
         let mut result = vec![];
 
-        let mut index = 0;
         let mut data = raw.clone();
         loop {
             let (_, flag) = peek(be_u8)(data)?;
@@ -52,14 +51,14 @@ impl CompressionData {
                 break;
             } else if flag != 0 {
                 let (_, end) = be_u8(data)?;
-                let (remain, _data) = take(end as usize + 1)(&data[index..])?;
+                let (remain, _data) = take(end as usize + 1)(data)?;
                 let (_, domain) = Self::read_domain(false)(_data)?;
 
                 data = remain;
                 result.push(DataType::Raw(domain));
-
-                index += end as usize + 1;
             } else {
+                let (_data, _) = be_u8(data)?;
+                data = _data;
                 break;
             }
         }
@@ -149,6 +148,27 @@ impl DataType {
 #[cfg(test)]
 mod tests {
     use super::{CompressionData, CompressionType, DataType};
+
+    #[tokio::test]
+    async fn test_read_normal() {
+        let data = vec![
+            1, 97, 3, 117, 49, 48, 7, 116, 119, 116, 114, 100, 110, 115, 3, 110, 101, 116, 0,
+        ];
+        let (data, result) = CompressionData::from_domain(&data).unwrap();
+        assert_eq!(data, vec![]);
+        assert_eq!(
+            result,
+            CompressionData::new(
+                vec![
+                    DataType::Raw(vec![97]),
+                    DataType::Raw(vec![117, 49, 48]),
+                    DataType::Raw(vec![116, 119, 116, 114, 100, 110, 115]),
+                    DataType::Raw(vec![110, 101, 116]),
+                ],
+                CompressionType::Domain
+            )
+        );
+    }
 
     #[tokio::test]
     async fn test_read_compression() {
