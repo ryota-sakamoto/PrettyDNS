@@ -120,7 +120,10 @@ mod tests {
             class: 1,
             ttl: 299,
             rdlength: 4,
-            rdata: vec![172, 217, 25, 238],
+            rdata: CompressionData::new(
+                vec![DataType::Raw(vec![172, 217, 25, 238])],
+                CompressionType::Data,
+            ),
         };
         cache(domain.clone(), QType::A, &vec![resource], &vec![], &vec![]).unwrap();
 

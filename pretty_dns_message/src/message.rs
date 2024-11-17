@@ -149,7 +149,7 @@ mod tests {
                     class: 10512,
                     ttl: 0,
                     rdlength: 0,
-                    rdata: vec![]
+                    rdata: CompressionData::new(vec![], CompressionType::Data),
                 }],
             }
         );

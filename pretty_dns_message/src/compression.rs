@@ -36,12 +36,6 @@ impl CompressionData {
         Ok((data, CompressionData::new(result, CompressionType::Domain)))
     }
 
-    pub fn from_data<'a>(raw: &'a [u8]) -> IResult<&'a [u8], CompressionData> {
-        let (data, result) = Self::from(raw)?;
-
-        Ok((data, CompressionData::new(result, CompressionType::Data)))
-    }
-
     fn from<'a>(raw: &'a [u8]) -> IResult<&'a [u8], Vec<DataType>> {
         let mut result = vec![];
 
@@ -111,14 +105,16 @@ impl CompressionData {
 
     pub fn into(self) -> Vec<u8> {
         let mut is_append_zero = false;
-        if let Some(DataType::Raw(_)) = self.inner.last() {
-            is_append_zero = true;
+        if let CompressionType::Domain = self._type {
+            if let Some(DataType::Raw(_)) = self.inner.last() {
+                is_append_zero = true;
+            }
         }
 
         let mut result: Vec<_> = self
             .inner
             .into_iter()
-            .map::<Vec<u8>, _>(|v| v.into())
+            .map::<Vec<u8>, _>(|v| v.into(&self._type))
             .flatten()
             .collect();
 
@@ -130,14 +126,18 @@ impl CompressionData {
     }
 }
 
-impl Into<Vec<u8>> for DataType {
-    fn into(self) -> Vec<u8> {
+impl DataType {
+    fn into(self, _type: &CompressionType) -> Vec<u8> {
         match self {
             DataType::Compression { position } => {
                 vec![192, position]
             }
             DataType::Raw(v) => {
-                let mut result = vec![v.len() as u8];
+                let mut result = if let CompressionType::Domain = _type {
+                    vec![v.len() as u8]
+                } else {
+                    vec![]
+                };
                 result.extend(v);
 
                 result

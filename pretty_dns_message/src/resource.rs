@@ -1,4 +1,7 @@
-use crate::{compression::CompressionData, qtype::QType};
+use crate::{
+    compression::{CompressionData, CompressionType, DataType},
+    qtype::QType,
+};
 use nom::{
     combinator::map,
     multi::count,
@@ -14,7 +17,7 @@ pub struct Resource {
     pub class: u16,
     pub ttl: u32,
     pub rdlength: u16,
-    pub rdata: Vec<u8>,
+    pub rdata: CompressionData,
 }
 
 impl Resource {
@@ -34,7 +37,14 @@ impl Resource {
                 class: class,
                 ttl: ttl,
                 rdlength: rdlength,
-                rdata: rdata,
+                rdata: CompressionData::new(
+                    if rdlength > 0 {
+                        vec![DataType::Raw(rdata.to_vec())]
+                    } else {
+                        vec![]
+                    },
+                    CompressionType::Data,
+                ),
             },
         ));
     }
@@ -50,9 +60,9 @@ impl Resource {
         v.write_u16(self.class).await?;
         v.write_u32(self.ttl).await?;
         v.write_u16(self.rdlength).await?;
-        for d in &self.rdata {
-            v.write_u8(*d).await?;
-        }
+
+        let rdata: Vec<u8> = self.rdata.clone().into();
+        v.write_all(&rdata).await?;
 
         return Ok(v);
     }
@@ -80,7 +90,10 @@ mod tests {
                 class: 1,
                 ttl: 299,
                 rdlength: 4,
-                rdata: vec![172, 217, 25, 238],
+                rdata: CompressionData::new(
+                    vec![DataType::Raw(vec![172, 217, 25, 238]),],
+                    CompressionType::Data,
+                ),
             }
         );
     }
@@ -99,7 +112,10 @@ mod tests {
             class: 1,
             ttl: 299,
             rdlength: 4,
-            rdata: vec![172, 217, 25, 238],
+            rdata: CompressionData::new(
+                vec![DataType::Raw(vec![172, 217, 25, 238])],
+                CompressionType::Data,
+            ),
         };
 
         let result = h.to_vec().await.unwrap();

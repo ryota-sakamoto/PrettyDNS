@@ -126,15 +126,14 @@ async fn resolve(req: Message, root_ns: SocketAddr) -> io::Result<Message> {
                 continue;
             }
 
-            if a.rdata.len() != 4 {
-                warn!("rdata is not wrong length: {:?}", a.rdata);
+            let rdata = a.rdata.into();
+            if rdata.len() != 4 {
+                warn!("rdata is not wrong length: {:?}", rdata);
                 continue;
             }
 
             ns = SocketAddr::new(
-                IpAddr::V4(Ipv4Addr::new(
-                    a.rdata[0], a.rdata[1], a.rdata[2], a.rdata[3],
-                )),
+                IpAddr::V4(Ipv4Addr::new(rdata[0], rdata[1], rdata[2], rdata[3])),
                 53,
             );
         }
