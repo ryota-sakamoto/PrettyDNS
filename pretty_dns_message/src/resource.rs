@@ -19,7 +19,7 @@ pub struct Resource {
 
 impl Resource {
     pub fn read(data: &[u8]) -> IResult<&[u8], Resource> {
-        let (data, name) = CompressionData::read(data)?;
+        let (data, name) = CompressionData::from_domain(data)?;
         let (data, _type) = map(be_u16, |q| q.into())(data)?;
         let (data, class) = be_u16(data)?;
         let (data, ttl) = be_u32(data)?;
@@ -62,7 +62,7 @@ impl Resource {
 mod tests {
     use super::QType;
     use super::Resource;
-    use crate::compression::{CompressionData, DataType};
+    use crate::compression::{CompressionData, CompressionType, DataType};
 
     #[tokio::test]
     async fn parse_resource() {
@@ -72,7 +72,10 @@ mod tests {
         assert_eq!(
             q,
             Resource {
-                name: CompressionData::new(vec![DataType::Compression { position: 12 }]),
+                name: CompressionData::new(
+                    vec![DataType::Compression { position: 12 }],
+                    CompressionType::Domain
+                ),
                 _type: QType::A,
                 class: 1,
                 ttl: 299,
@@ -85,10 +88,13 @@ mod tests {
     #[tokio::test]
     async fn write_resource() {
         let h = Resource {
-            name: CompressionData::new(vec![
-                DataType::Raw(vec![103, 111, 111, 103, 108, 101]),
-                DataType::Raw(vec![99, 111, 109]),
-            ]),
+            name: CompressionData::new(
+                vec![
+                    DataType::Raw(vec![103, 111, 111, 103, 108, 101]),
+                    DataType::Raw(vec![99, 111, 109]),
+                ],
+                CompressionType::Domain,
+            ),
             _type: QType::A,
             class: 1,
             ttl: 299,

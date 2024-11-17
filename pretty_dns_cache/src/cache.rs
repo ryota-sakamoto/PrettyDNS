@@ -92,7 +92,7 @@ pub fn cache(
 mod tests {
     use super::{cache, resolve};
     use pretty_dns_message::{
-        compression::{CompressionData, DataType},
+        compression::{CompressionData, CompressionType, DataType},
         domain::Domain,
         qtype::QType,
         resource::Resource,
@@ -109,10 +109,13 @@ mod tests {
     fn test_resolve_some() {
         let domain = "test.example.com.".to_owned();
         let resource = Resource {
-            name: CompressionData::new(vec![
-                DataType::Raw(vec![103, 111, 111, 103, 108, 101]),
-                DataType::Raw(vec![99, 111, 109]),
-            ]),
+            name: CompressionData::new(
+                vec![
+                    DataType::Raw(vec![103, 111, 111, 103, 108, 101]),
+                    DataType::Raw(vec![99, 111, 109]),
+                ],
+                CompressionType::Domain,
+            ),
             _type: QType::A,
             class: 1,
             ttl: 299,
