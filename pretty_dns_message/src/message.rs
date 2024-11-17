@@ -63,7 +63,7 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use super::Message;
-    use crate::compression_domain::{CompressionDomain, DataType};
+    use crate::compression::{CompressionData, DataType};
     use crate::domain::Domain;
     use crate::qtype::QType;
     use crate::resource::Resource;
@@ -144,7 +144,7 @@ mod tests {
                 answer: vec![],
                 authority: vec![],
                 additional: vec![Resource {
-                    name: CompressionDomain::new(vec![]),
+                    name: CompressionData::new(vec![]),
                     _type: QType::Unknown(0),
                     class: 10512,
                     ttl: 0,
