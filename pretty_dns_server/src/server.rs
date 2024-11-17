@@ -57,6 +57,10 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     let (_, req) = result.unwrap();
     debug!("parsed request: {:?}", req);
 
+    return resolve(req, "202.12.27.33:53".parse().unwrap()).await;
+}
+
+async fn resolve(req: Message, root_ns: SocketAddr) -> io::Result<Message> {
     if req.query.is_none() {
         return Err(std::io::Error::from(std::io::ErrorKind::Other));
     }
@@ -64,9 +68,9 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
     let q = req.query.unwrap();
     let query_domain = q.qname.to_string();
     if let Some(cache_data) = cache::resolve(query_domain.clone(), q.qtype) {
-        let an_count = cache_data.data.answer.len() as u16;
-        let ns_count = cache_data.data.authority.len() as u16;
-        let ar_count = cache_data.data.additional.len() as u16;
+        let an_count = cache_data.answer.len() as u16;
+        let ns_count = cache_data.authority.len() as u16;
+        let ar_count = cache_data.additional.len() as u16;
 
         return Ok(Message {
             header: Header {
@@ -87,23 +91,21 @@ async fn handler(buf: Vec<u8>) -> io::Result<Message> {
                 ar_count: ar_count,
             },
             query: Some(q),
-            answer: cache_data.data.answer,
-            authority: cache_data.data.authority,
-            additional: cache_data.data.additional,
+            answer: cache_data.answer,
+            authority: cache_data.authority,
+            additional: cache_data.additional,
         });
     }
 
     let mut resolve_list = vec![];
-    let domain_list = get_domain_list(&query_domain);
-    for v in domain_list {
+    for v in get_domain_list(&query_domain) {
         resolve_list.push(v.clone());
-        // let record = cache::resolve(v, QType::NS);
     }
 
     resolve_list.reverse();
     debug!("resolve list for ns: {:?}", &resolve_list);
 
-    let mut ns: SocketAddr = "202.12.27.33:53".parse().unwrap();
+    let mut ns = root_ns;
     for r in resolve_list {
         let q = Query {
             qname: Domain::from(r),

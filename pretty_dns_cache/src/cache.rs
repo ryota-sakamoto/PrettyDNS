@@ -20,7 +20,7 @@ pub struct CacheData {
     pub additional: Vec<Resource>,
 }
 
-pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
+pub fn resolve(domain: String, qtype: QType) -> Option<CacheData> {
     debug!("try to resolve cache: {:?} {:?}", domain, qtype);
     let mut c = CACHE.lock().unwrap();
     let mut r = c.get(&(domain.clone(), qtype))?.clone();
@@ -35,7 +35,7 @@ pub fn resolve(domain: String, qtype: QType) -> Option<Record> {
 
     r.update_ttl();
 
-    return Some(r);
+    return Some(r.data);
 }
 
 impl Record {
